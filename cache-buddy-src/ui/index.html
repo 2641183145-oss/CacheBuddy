@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Cache Buddy</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+
+<body class="v-splash">
+
+  <div id="blobs">
+    <i class="blob b1"></i>
+  </div>
+
+  <div id="panel">
+
+    <header class="card" id="head">
+      <!-- the heartbeat: one 44px ECG cell where a bright current sweeps
+           left to right on a loop and fires the beat at the spike. It
+           never stops sweeping, even when nothing is being kept warm -->
+      <canvas id="ecg" class="ecg" width="44" height="44"
+        title="Prompt-cache heartbeat" data-i18n-title="Prompt-cache heartbeat"></canvas>
+      <div class="hinfo">
+        <div class="hrow">
+          <span class="brandrow">
+            <span class="brand" id="brand">Cache Buddy</span>
+            <!-- harness picker: the current harness's mark; click = menu -->
+            <span class="hk" id="hk" hidden>
+              <button id="hkBtn" title="Switch harness" data-i18n-title="Switch harness" aria-haspopup="menu"
+                aria-expanded="false"><i id="hkIcon"></i><b class="caret"></b></button>
+              <div class="hkmenu" id="hkMenu" role="menu" hidden>
+                <button data-bk="cc" role="menuitemradio"><i class="hico"></i><span>Claude Code</span></button>
+                <button data-bk="devin" role="menuitemradio"><i class="hico"></i><span>Devin</span></button>
+                <button data-bk="droid" role="menuitemradio"><i class="hico"></i><span>Droid</span></button>
+              </div>
+            </span>
+          </span>
+          <span class="hbtns">
+            <button id="btnSet" title="Settings" data-i18n-title="Settings"
+              aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24"
+                class="gear"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+            <button id="btnMin" title="Minimize" data-i18n-title="Minimize">—</button>
+            <button id="btnX" title="Close" data-i18n-title="Close">×</button>
+          </span>
+        </div>
+        <div id="status">Idle</div>
+        <div id="target"></div>
+        <!-- Droid Desktop without its debug port: one click fixes Factory's
+             shortcuts (kept from then on) and restarts it with the port -->
+        <button id="fixBtn" hidden></button>
+      </div>
+      <!-- ⚙ settings: language, 缓存维护时间 -->
+      <div class="setpop" id="setPop" role="dialog" hidden>
+        <div class="setrow">
+          <span data-i18n="Language">Language</span>
+          <div class="seg" id="segLang">
+            <button data-lang="zh">中文</button><button data-lang="en">English</button>
+          </div>
+        </div>
+        <div class="setrow">
+          <span data-i18n="Keep-alive time">Keep-alive time</span>
+          <div class="seg" id="segMaint">
+            <button data-min="15" data-i18n="15 min">15 min</button><button data-min="30"
+              data-i18n="30 min">30 min</button><button data-min="45" data-i18n="45 min">45 min</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- plan quota (Devin, Droid): concentric rings, read in the
+         background; backends that send `quota` only. Click the title to
+         fold it to one line that shows one window at a time (#quotaTick) -->
+    <section class="card" id="quotaCard" hidden>
+      <div class="qhead">
+        <span class="qtitle" id="quotaHead" role="button" tabindex="0" aria-expanded="true"><span data-i18n="Plan quota">Plan quota</span> <b id="quotaPlan" class="qplan"></b></span>
+        <span class="qtick" id="quotaTick" aria-hidden="true"></span>
+        <span class="qside"><span id="quotaMeta" class="qmeta"></span><button id="btnQuota" title="Refresh"
+            data-i18n-title="Refresh">⟳</button></span>
+      </div>
+      <div id="quotaRows" class="qrings"></div>
+      <div id="quotaNote" class="qnote" hidden></div>
+    </section>
+
+    <section class="card" id="cacheCard">
+      <!-- fold: the head stays, the rows hide; the dots keep one mark per
+           track so a folded card still says what is warm -->
+      <div class="chead" id="cacheHead" role="button" tabindex="0" aria-expanded="true">
+        <span class="clab"><span data-i18n="Cache">Cache</span> <b id="cacheSum" class="csum"></b></span>
+        <!-- folded: one circle per session, sized by how many there are -->
+        <span class="cfold" id="cacheFold"></span>
+      </div>
+      <div id="tracks"></div>
+      <div id="cacheFoot" class="cfoot"></div>
+    </section>
+
+    <!-- sessions and token use share the stretchy slot as two tabs; the
+         active tab clicked again folds the card to its head -->
+    <section class="card" id="sessCard">
+      <!-- one card, two faces that roll: sessions / token use. The left is
+           a drum window showing the face's title (click = fold); the right
+           holds the way to the other face — a live 7-day mini chart from
+           sessions, a folder stack with the session count from tokens -->
+      <div class="shead" id="sessHead">
+        <button class="drum" id="drum" aria-expanded="true">
+          <span class="drumin">
+            <span class="face fs"><span class="ffold" id="faceFolder"></span><span data-i18n="Sessions">Sessions</span><b id="sessCount" class="scount"></b><span id="sessN" class="sn"></span></span>
+            <span class="face ft"><svg class="fico" viewBox="0 0 16 16"><path d="M2.5 13.5h11"/><rect x="3.2" y="8" width="2.2" height="4" rx=".6"/><rect x="6.9" y="4.5" width="2.2" height="7.5" rx=".6"/><rect x="10.6" y="6.5" width="2.2" height="5.5" rx=".6"/></svg><b id="tokTotal" class="tktotal"></b><span id="tokUsd" class="tkusd"></span></span>
+          </span>
+        </button>
+        <span class="sside">
+          <!-- days shown: hold the little calendar, drag it between 1 · 7 · 30 -->
+          <div class="tkseg" id="segTok" role="slider" tabindex="0" aria-valuemin="1"
+            aria-valuemax="30" data-i18n-aria="Days shown" aria-label="Days shown">
+            <span class="tkstop">1</span><span class="tkstop">7</span><span class="tkstop">30</span>
+            <span class="tkknob"><s></s><s></s><span class="tkpage"><span class="tkwin"><b class="tkday">7</b></span></span></span>
+          </div>
+          <!-- to tokens: this week's real columns, in the top model's colour -->
+          <button class="spark" id="toTok" hidden data-i18n-title="Token use" title="Token use"><span id="sparkBars"></span></button>
+          <!-- back to sessions: a folder stack + how many there are -->
+          <button class="tosess" id="toSess" data-i18n-title="Sessions" title="Sessions"><span class="ffold" id="backFolder"></span><i id="sessBadge"></i></button>
+          <button id="btnRefresh" title="Refresh" data-i18n-title="Refresh">⟳</button>
+        </span>
+      </div>
+      <div id="tree"></div>
+      <!-- why a locked (CLI opened before Buddy) session can't be guarded -->
+      <div id="lockNote" class="locknote" role="status" hidden></div>
+      <!-- right-click on a session: carry it to another harness -->
+      <div id="rowMenu" class="rowmenu" role="menu" hidden></div>
+      <!-- …its "Droid ▸" item: the other Factory accounts -->
+      <div id="acctMenu" class="rowmenu" role="menu" hidden></div>
+      <!-- token use per model for the harness shown: a stacked column per
+           hour (today) or day (7/30 days), then one row per model split
+           into cache read / cache write / input / output -->
+      <div class="tkbody" id="tokBody">
+        <div id="tokChart" class="tkchart"></div>
+        <div id="tokAxis" class="tkaxis"></div>
+        <div id="tokRows" class="tkrows"></div>
+        <div class="tklegend" id="tokLegend">
+          <span><i class="k-cr"></i><b data-i18n="Cache read">Cache read</b></span>
+          <span><i class="k-cw"></i><b data-i18n="Cache write">Cache write</b></span>
+          <span><i class="k-in"></i><b data-i18n="Input">Input</b></span>
+          <span><i class="k-out"></i><b data-i18n="Output">Output</b></span>
+        </div>
+      </div>
+      <div id="tokTip" class="htip tktip" hidden></div>
+    </section>
+
+    <!-- savings heatmap: one square per day, green depth = Buddy's saving
+         (backends that send `ledger` only) -->
+    <section class="card" id="saveCard" hidden>
+      <div class="shead">
+        <span><span data-i18n="Savings">Savings</span> <b id="saveTotal" class="stotal"></b></span>
+        <span class="mnav">
+          <button id="mPrev" title="Previous month" data-i18n-title="Previous month">‹</button>
+          <span id="mLabel"></span>
+          <button id="mNext" title="Next month" data-i18n-title="Next month">›</button>
+        </span>
+      </div>
+      <div id="heat" class="heat"></div>
+      <div id="heatTip" class="htip" hidden></div>
+    </section>
+
+    <div id="controls">
+      <!-- heartbeat interval: a white thumb slides under the one chosen -->
+      <div class="seg ivseg" id="segIv">
+        <i class="ivthumb" id="ivThumb"></i><button data-iv="15">15s</button><button data-iv="270">4.5min</button>
+      </div>
+      <button id="btnGuard" class="primary"><span id="guardLabel">Start guard</span></button>
+      <button id="btnNow" class="secondary"><span data-i18n="Renew now">Renew now</span></button>
+    </div>
+
+    <footer>
+      <span id="logline" class="mono"></span>
+      <span id="cdp" title="CDP"><span id="cdpLabel">CDP</span><i></i></span>
+      <button id="btnExit" class="tiny" data-i18n="Quit">Quit</button>
+    </footer>
+
+    <!-- carry confirm: over the whole panel (the sessions card can be
+         short), with a soft scrim behind -->
+    <div id="carryScrim" class="carryscrim" hidden></div>
+    <div id="carryCard" class="carrycard" role="dialog" aria-modal="true" hidden>
+      <div class="cchead"><span class="ccfrom"></span><span class="ccarrow">→</span><span class="ccto"></span></div>
+      <div class="cctitle"></div>
+      <div class="ccstats"></div>
+      <div class="ccwarn" hidden></div>
+      <div class="ccbtns"><button class="ccno" data-i18n="Cancel">Cancel</button><button class="ccyes"
+          data-i18n="Carry over">Carry over</button></div>
+    </div>
+
+    <!-- copy to the other Factory account: no confirm, just a see-through
+         toast where one Droid tosses the session to the other -->
+    <div id="xferToast" class="xfer" role="status" aria-live="polite" hidden>
+      <div class="xstage">
+        <div class="xdroid xfrom"><span class="xmark"></span><b></b></div>
+        <span class="xfile" aria-hidden="true"></span>
+        <div class="xdroid xto"><span class="xmark"></span><b></b><i class="xok" aria-hidden="true"></i></div>
+      </div>
+      <div class="xmsg"></div>
+    </div>
+
+  </div>
+
+  <!-- launch splash: the app icon's pinwheel spins, then the window flies
+       into the dock. First launch adds how to get the panel back -->
+  <div id="splash" role="status" aria-live="polite">
+    <svg id="spLogo" viewBox="0 0 256 256" aria-hidden="true">
+      <defs>
+        <linearGradient id="spG0" gradientUnits="userSpaceOnUse" x1="140" y1="128" x2="188" y2="50">
+          <stop offset="0" stop-color="#047857"/><stop offset="1" stop-color="#7BEBC0"/>
+        </linearGradient>
+        <linearGradient id="spGw" gradientUnits="userSpaceOnUse" x1="140" y1="128" x2="188" y2="50">
+          <stop offset="0" stop-color="#D9E0DC"/><stop offset="1" stop-color="#FFFFFF"/>
+        </linearGradient>
+        <path id="spBlade" d="M133 39C176 39 210 69 216 111Q217 117 210 119L150 134Q141 136 139 127L125 49Q123 40 133 39Z"/>
+      </defs>
+      <rect x="7" y="7" width="242" height="242" rx="56" fill="#121516"/>
+      <g id="spBlades">
+        <use href="#spBlade" fill="url(#spG0)"/>
+        <use href="#spBlade" fill="url(#spGw)" transform="rotate(90 128 128)"/>
+        <use href="#spBlade" fill="url(#spGw)" transform="rotate(180 128 128)"/>
+        <use href="#spBlade" fill="url(#spGw)" transform="rotate(270 128 128)"/>
+      </g>
+    </svg>
+    <div class="sptext">
+      <div class="spbrand">Cache Buddy</div>
+      <div class="spsub" data-i18n="Starting…">Starting…</div>
+    </div>
+    <div class="sphint">
+      <div class="sphtitle" data-i18n="SPLASH_TITLE">Buddy docks to the edge of your screen</div>
+      <div class="sprow"><b data-i18n="Hover">Hover</b><span data-i18n="the edge strip to peek">the edge strip to peek</span></div>
+      <div class="sprow key"><b data-i18n="Double-click">Double-click</b><span data-i18n="the peek to open the panel">the peek to open the panel</span></div>
+      <div class="sprow"><b data-i18n="Tray icon">Tray icon</b><span data-i18n="open or quit any time">open or quit any time</span></div>
+      <button id="spGo" data-i18n="Got it">Got it</button>
+    </div>
+  </div>
+
+  <div id="dock"><i id="dockDot"></i></div>
+
+  <!-- peek: the half-open card. The same ECG as the header, the hottest
+       session's cache countdown (or "+$x.xx" right after a rescue), then
+       one ringed mark per guarded session — the ring is its cache left -->
+  <div id="peek">
+    <canvas id="peekEcg" class="ecg" width="40" height="40"></canvas>
+    <div id="peekLabel" class="plabel"></div>
+    <div id="peekMascots"></div>
+  </div>
+
+  <script src="ecg.js"></script>
+  <script src="mascots.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>

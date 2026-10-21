@@ -1,0 +1,194 @@
+<!doctype html>
+<!-- Icon candidates for Cache Buddy, round 7: pinwheel variations -->
+<html lang="zh"><head><meta charset="utf-8"><title>Cache Buddy 图标 · 第七轮</title>
+<style>
+body{margin:0;padding:18px 22px;background:#F4F5F7;font-family:"Segoe UI","Microsoft YaHei UI",sans-serif;color:#1F2328}
+h1{font-size:15px;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.c{background:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 4px 14px rgba(16,24,40,.06)}
+.n{font-size:13px;font-weight:700}.d{font-size:10.5px;color:#6B7280;margin:2px 0 10px;line-height:1.45;min-height:30px}
+.row{display:flex;align-items:center;gap:12px}
+.sm{display:flex;flex-direction:column;gap:6px}
+.strip{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px}
+.lt{background:#EEF0F3}.dk{background:#202124}
+</style>
+</head><body>
+<h1>第七轮：风车变体（大图 + 48 / 32 / 16 像素，浅色 / 深色任务栏）</h1>
+<svg width="0" height="0" style="position:absolute"><defs>
+
+<!--
+  Strategy: each blade is a filled triangle-ish wedge from center to two rim
+  points that are ~80° apart (not 90°) so adjacent blades have a visible gap.
+
+  For 4-blade (80° per blade, gap 10° between each):
+    blade 0: from -50° to  30°  → 4 blades at offsets 0, 90, 180, 270
+  rim points at r=32 from center (50,50):
+    -50°  → (50+32·cos(-50°), 50+32·sin(-50°)) = (50+20.57, 50-24.51) = (70.57, 25.49)
+     30°  → (50+32·cos( 30°), 50+32·sin( 30°)) = (50+27.71, 50+16.00) = (77.71, 66.00)
+  Then rotate the whole group by 0/90/180/270.
+  But simpler: just inline 4 blades using pre-computed angles.
+
+  Blade spans: center=80°, gap=10°, start angles: 265°,355°,85°,175° (pointing up first)
+  In SVG (y-axis down), 0°=east, 90°=south:
+    blade pointing North: span from 260° to 340° (center 300°... wait)
+
+  Simpler approach: define one blade and use <use> + rotate().
+  One blade: from center, line to (50, 18) [top, 270° = north], arc 80° CW to
+  the point 80° further CW, back to center.
+  80° CW from 270° = 350° = (50+32·cos(350°·π/180), 50+32·sin(350°·π/180))
+    = (50+31.52, 50-5.56) = (81.52, 44.44)
+  Arc: large-arc=0 (80°<180°), sweep=1 (CW)
+-->
+
+<!-- Single blade template: center→top→arc 80°CW→center -->
+<path id="blade4"
+  d="M50,50 L50,18 A32,32,0,0,1,81.52,44.44 Z"/>
+
+<!-- v1: original 4-blade, black tile, white blades, no rotation -->
+<symbol id="v1" viewBox="0 0 100 100">
+  <rect x="8" y="8" width="84" height="84" rx="20" fill="#111"/>
+  <use href="#blade4" fill="#fff"/>
+  <use href="#blade4" fill="#fff" transform="rotate(90,50,50)"/>
+  <use href="#blade4" fill="#fff" transform="rotate(180,50,50)"/>
+  <use href="#blade4" fill="#fff" transform="rotate(270,50,50)"/>
+</symbol>
+
+<!-- v2: 4-blade rotated 22.5° for spin -->
+<symbol id="v2" viewBox="0 0 100 100">
+  <rect x="8" y="8" width="84" height="84" rx="20" fill="#111"/>
+  <g transform="rotate(22.5,50,50)">
+    <use href="#blade4" fill="#fff"/>
+    <use href="#blade4" fill="#fff" transform="rotate(90,50,50)"/>
+    <use href="#blade4" fill="#fff" transform="rotate(180,50,50)"/>
+    <use href="#blade4" fill="#fff" transform="rotate(270,50,50)"/>
+  </g>
+</symbol>
+
+<!-- v3: 3-blade, 80° per blade, gap ~40°
+  blade from 270° to 350° (same as blade4), then rotate 0/120/240 -->
+<symbol id="v3" viewBox="0 0 100 100">
+  <rect x="8" y="8" width="84" height="84" rx="20" fill="#111"/>
+  <use href="#blade4" fill="#fff"/>
+  <use href="#blade4" fill="#fff" transform="rotate(120,50,50)"/>
+  <use href="#blade4" fill="#fff" transform="rotate(240,50,50)"/>
+</symbol>
+
+<!-- v4: 3-blade rotated 30° -->
+<symbol id="v4" viewBox="0 0 100 100">
+  <rect x="8" y="8" width="84" height="84" rx="20" fill="#111"/>
+  <g transform="rotate(30,50,50)">
+    <use href="#blade4" fill="#fff"/>
+    <use href="#blade4" fill="#fff" transform="rotate(120,50,50)"/>
+    <use href="#blade4" fill="#fff" transform="rotate(240,50,50)"/>
+  </g>
+</symbol>
+
+<!-- v5: swept-back 4-blade — each blade starts 20° ahead of cardinal axis
+  start at 250° (= 270°-20°), arc 80° CW to 330°
+  250° → (50+32·cos(250°·π/180), 50+32·sin(250°·π/180))
+       = (50-10.94, 50-30.07) = (39.06, 19.93)
+  330° → (50+32·cos(330°·π/180), 50+32·sin(330°·π/180))
+       = (50+27.71, 50-16.00) = (77.71, 34.00)
+-->
+<path id="blade4s" d="M50,50 L39.06,19.93 A32,32,0,0,1,77.71,34.00 Z"/>
+<symbol id="v5" viewBox="0 0 100 100">
+  <rect x="8" y="8" width="84" height="84" rx="20" fill="#111"/>
+  <use href="#blade4s" fill="#fff"/>
+  <use href="#blade4s" fill="#fff" transform="rotate(90,50,50)"/>
+  <use href="#blade4s" fill="#fff" transform="rotate(180,50,50)"/>
+  <use href="#blade4s" fill="#fff" transform="rotate(270,50,50)"/>
+</symbol>
+
+<!-- v6: white tile, black blades -->
+<symbol id="v6" viewBox="0 0 100 100">
+  <rect x="8.5" y="8.5" width="83" height="83" rx="19.5" fill="#fff" stroke="#DADDE2"/>
+  <use href="#blade4" fill="#111"/>
+  <use href="#blade4" fill="#111" transform="rotate(90,50,50)"/>
+  <use href="#blade4" fill="#111" transform="rotate(180,50,50)"/>
+  <use href="#blade4" fill="#111" transform="rotate(270,50,50)"/>
+</symbol>
+
+<!-- v7: 4-blade + black dot at center -->
+<symbol id="v7" viewBox="0 0 100 100">
+  <rect x="8" y="8" width="84" height="84" rx="20" fill="#111"/>
+  <use href="#blade4" fill="#fff"/>
+  <use href="#blade4" fill="#fff" transform="rotate(90,50,50)"/>
+  <use href="#blade4" fill="#fff" transform="rotate(180,50,50)"/>
+  <use href="#blade4" fill="#fff" transform="rotate(270,50,50)"/>
+  <circle cx="50" cy="50" r="9" fill="#111"/>
+</symbol>
+
+<!-- v8: 4-blade + donut hub (black ring over white) -->
+<symbol id="v8" viewBox="0 0 100 100">
+  <rect x="8" y="8" width="84" height="84" rx="20" fill="#111"/>
+  <use href="#blade4" fill="#fff"/>
+  <use href="#blade4" fill="#fff" transform="rotate(90,50,50)"/>
+  <use href="#blade4" fill="#fff" transform="rotate(180,50,50)"/>
+  <use href="#blade4" fill="#fff" transform="rotate(270,50,50)"/>
+  <circle cx="50" cy="50" r="11" fill="#111"/>
+  <circle cx="50" cy="50" r="5" fill="#fff"/>
+</symbol>
+
+<!-- v9: 6-blade = two 3-blade sets offset 60° -->
+<symbol id="v9" viewBox="0 0 100 100">
+  <rect x="8" y="8" width="84" height="84" rx="20" fill="#111"/>
+  <use href="#blade4" fill="#fff"/>
+  <use href="#blade4" fill="#fff" transform="rotate(120,50,50)"/>
+  <use href="#blade4" fill="#fff" transform="rotate(240,50,50)"/>
+  <use href="#blade4" fill="#fff" transform="rotate(60,50,50)"/>
+  <use href="#blade4" fill="#fff" transform="rotate(180,50,50)"/>
+  <use href="#blade4" fill="#fff" transform="rotate(300,50,50)"/>
+</symbol>
+
+<!-- v10: narrow 4-blade (50° per blade, bigger gaps)
+  start 270°, arc 50° CW to 320°
+  320° → (50+32·cos(320°·π/180), 50+32·sin(320°·π/180))
+        = (50+24.51, 50-20.57) = (74.51, 29.43)
+-->
+<path id="blade4n" d="M50,50 L50,18 A32,32,0,0,1,74.51,29.43 Z"/>
+<symbol id="v10" viewBox="0 0 100 100">
+  <rect x="8" y="8" width="84" height="84" rx="20" fill="#111"/>
+  <use href="#blade4n" fill="#fff"/>
+  <use href="#blade4n" fill="#fff" transform="rotate(90,50,50)"/>
+  <use href="#blade4n" fill="#fff" transform="rotate(180,50,50)"/>
+  <use href="#blade4n" fill="#fff" transform="rotate(270,50,50)"/>
+</symbol>
+
+<!-- v11: petal/ellipse 4-blade (organic) + center dot -->
+<symbol id="v11" viewBox="0 0 100 100">
+  <rect x="8" y="8" width="84" height="84" rx="20" fill="#111"/>
+  <ellipse cx="50" cy="32" rx="10" ry="18" fill="#fff"/>
+  <ellipse cx="68" cy="50" rx="18" ry="10" fill="#fff"/>
+  <ellipse cx="50" cy="68" rx="10" ry="18" fill="#fff"/>
+  <ellipse cx="32" cy="50" rx="18" ry="10" fill="#fff"/>
+  <circle cx="50" cy="50" r="8" fill="#111"/>
+</symbol>
+
+<!-- v12: bold C arc -->
+<symbol id="v12" viewBox="0 0 100 100">
+  <rect x="8" y="8" width="84" height="84" rx="20" fill="#111"/>
+  <path d="M74,34 A30,30,0,1,0,74,66" fill="none" stroke="#fff" stroke-width="17" stroke-linecap="round"/>
+</symbol>
+
+</defs></svg>
+<div class="grid" id="g"></div>
+<script>
+const I = [
+  ["v1","v1 · 原版四叶","四片扇形叶片，均匀分布，叶片之间有缝。"],
+  ["v2","v2 · 斜转 22.5°","原版旋转 22.5°，叶片朝一个方向倾，有转动感。"],
+  ["v3","v3 · 三叶直立","三片叶片，120° 分布，更像 Devin 的三叉形。"],
+  ["v4","v4 · 三叶斜转","三叶版旋转 30°，更有速度感。"],
+  ["v5","v5 · 扫掠叶片","叶片从斜线出发扫向弧顶，像真正的螺旋桨。"],
+  ["v6","v6 · 白底反色","白底，叶片变黑，浅色任务栏下更显眼。"],
+  ["v7","v7 · 加黑圆心","四叶 + 中心一个实心黑圆，视觉更稳。"],
+  ["v8","v8 · 双环圆心","四叶 + 中心双环（像风扇轴），层次感。"],
+  ["v9","v9 · 六叶星形","两组三叶错开 60°，形成六芒星感。"],
+  ["v10","v10 · 细叶留缝","叶片只有 50° 宽，之间有更大空隙，更轻。"],
+  ["v11","v11 · 椭圆花瓣","四个椭圆叶片，中心压一个黑点，有机感。"],
+  ["v12","v12 · 大 C 弧","粗 C 弧，快封口了——「快保住了」。"],
+];
+const use = (id, s) => `<svg width="${s}" height="${s}"><use href="#${id}"/></svg>`;
+document.getElementById("g").innerHTML = I.map(([id,n,d]) =>
+  `<div class="c"><div class="n">${n}</div><div class="d">${d}</div><div class="row">${use(id,112)}<div class="sm"><div class="strip lt">${[48,32,16].map(s=>use(id,s)).join("")}</div><div class="strip dk">${[48,32,16].map(s=>use(id,s)).join("")}</div></div></div></div>`
+).join("");
+</script></body></html>

@@ -1,0 +1,58 @@
+﻿Cache Buddy 使用说明
+====================
+
+它做什么
+--------
+AI 编程助手（Claude Code、Devin、Droid）的提示缓存闲置 5 分钟就会过期，过期后下一句话要把整段上下文按全价重新算一遍。
+Cache Buddy 在你离开、缓存快过期时替你悄悄续一下，回来接着聊就还是便宜的缓存价。
+
+需要
+----
+- Windows 10 / 11（64 位）
+- Microsoft Edge WebView2（Windows 11 自带；Windows 10 没有的话去微软官网装 "WebView2 Runtime"）
+
+启动
+----
+双击 CacheBuddy.exe。面板贴在屏幕右边缘，鼠标移过去会展开。
+第一次运行如果 Windows 提示"已保护你的电脑"：点"更多信息"→"仍要运行"（这个程序没有做代码签名）。
+
+使用
+----
+1. 标题右边的图标切换 Claude Code / Devin / Droid（只显示这台电脑上装了的）。
+2. 在会话列表里选一个会话，点"开始守护"。可以同时守护多个。
+   会话标题右边的小柱状图 = 最近 7 天的 token 用量，点它切到 Token 页（按模型分，点某个模型看明细）；
+   Token 页右上角的文件夹图标点回会话。点卡片左上角的标题可以把整张卡收起。
+3. 右上角齿轮：切换中文 / English；"缓存维护时间"= 最后一次真实对话之后再守护多久（15 分钟 / 半小时 / 45 分钟，默认半小时），到时自动停。
+4. 用完点右下角"退出"。
+
+打开期间它会改两处设置，退出时自动改回
+------------------------------------
+- Claude Code：把 ~/.claude/settings.json 里的 ANTHROPIC_BASE_URL 指向本机 127.0.0.1:47821（原文件备份成 settings.json.bak-cache-buddy）。已经开着的 Claude Code 下一句话就会经过它，不用重启。
+- Devin CLI：把用户环境变量 WINDSURF_API_SERVER_URL 设为 127.0.0.1:47822。只对之后新开的终端生效；Buddy 打开前就开着的 CLI 会话，在列表里显示一把锁，照提示关掉终端重开、再点刷新就行。
+- 正常退出、程序崩溃、关机都会自动还原。万一突然断电后 Claude Code 报连不上（ECONNREFUSED / Unable to connect），重新打开一次 Cache Buddy 再点退出即可。
+
+套餐额度（Devin / Droid）
+------------------------
+- Devin：自动读取 Devin 的登录信息，不用设置。前提是用 Devin CLI 登录过一次：
+  在终端运行  devin auth login  （Devin CLI 在 %LOCALAPPDATA%\devin\cli\bin\devin.exe）。
+  登录后会生成 %APPDATA%\devin\credentials.toml，Cache Buddy 每 5 分钟读一次额度，点额度卡右上角 ⟳ 立即刷新。
+  卡片提示"Devin 未登录"或"登录过期"时，重新运行一次 devin auth login 即可。
+- Droid：需要一个 Factory 的 API key（fk- 开头，在 Factory 网页的设置里生成）。
+  在 cache-buddy-src 目录运行  python quota.py set-factory-key  ，粘贴 key 后回车。
+  key 存在 Windows 凭据管理器里，不会写进任何文件。
+
+Devin Desktop（可选）
+--------------------
+Desktop 的心跳是在 Devin 窗口里发一条消息。想让它在后台发、不把 Devin 窗口拉到前台，需要打开 Devin 的调试端口：
+在 %USERPROFILE%\.devin\argv.json 里加一行 "remote-debugging-port": "9222"（注意 9222 要带引号），然后重启 Devin。
+注意：打开这个端口后，本机其他程序也能控制 Devin 窗口，介意的话就不要开。
+
+安全与费用
+----------
+- 代理只监听本机 127.0.0.1，请求原样转发到你原来的地址。登录凭据只在内存里用于续期，不写日志、不存盘、不上传。
+- 每次心跳要花一点钱（大约等于读一次缓存）；面板上的"省下"已经扣掉了心跳本身的花费。
+- 日志和设置在 %USERPROFILE%\.claude\cache-buddy\ 和 %APPDATA%\devin\cache-sentinel\。
+
+卸载
+----
+退出后删掉 CacheBuddy.exe；想清干净，再删上面两个文件夹。

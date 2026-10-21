@@ -1,0 +1,108 @@
+<!doctype html>
+<!-- Demo of Droid Desktop's "restart Factory" flow (not loaded by the app):
+     the panel's header card with the real app.css, played on a loop —
+     needs restart -> hover -> restarting -> back to guarding, plus the
+     retry state. Open in a browser. -->
+<html lang="zh"><head><meta charset="utf-8"><title>重启 Factory · 动画演示</title>
+<link rel="stylesheet" href="app.css">
+<style>
+html, body { height: auto; overflow: auto; background: #EEF1EF; }
+.wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 26px 16px; }
+.stagebox { width: 340px; padding: 10px; border-radius: 18px;
+  background: linear-gradient(160deg, #E9EEF2, #F3EEE6); }
+#head { padding: 12px 12px 12px 10px; }
+.ecgph { width: 44px; height: 44px; flex: none; display: grid; place-items: center; }
+.ecgph svg { width: 40px; height: 30px; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.step { font: 600 12px "Segoe UI", "Microsoft YaHei UI", sans-serif; color: #4B5563; }
+.steps { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: 380px; }
+.steps b { font: 600 11px "Segoe UI", "Microsoft YaHei UI", sans-serif; padding: 3px 8px; border-radius: 999px;
+  background: #fff; color: #9CA3AF; border: 1px solid #E5E7EB; transition: all .2s; }
+.steps b.on { color: #047857; border-color: #A7DDC4; background: #ECF8F2; }
+.cursor { position: absolute; width: 18px; height: 18px; pointer-events: none; z-index: 9;
+  transition: left .6s cubic-bezier(.3,.8,.3,1), top .6s cubic-bezier(.3,.8,.3,1), opacity .3s; }
+.cursor.press { transform: scale(.85); }
+.ctl { display: flex; gap: 8px; }
+.ctl button { font: 600 11.5px "Segoe UI", "Microsoft YaHei UI", sans-serif; padding: 5px 10px; cursor: pointer; }
+</style></head><body>
+<div class="wrap">
+  <div class="steps" id="steps">
+    <b>1 需要重启</b><b>2 悬停</b><b>3 点击 · 重启中</b><b>4 重启完成 · 守护中</b><b>5 失败时：再试一次</b>
+  </div>
+  <div class="stagebox" style="position:relative">
+    <header class="card" id="head">
+      <div class="ecgph"><svg viewBox="0 0 40 30"><path id="ecgLine" d="M2 15h11l3-8 4 16 3-8h15"/></svg></div>
+      <div class="hinfo">
+        <div class="hrow"><span class="brandrow"><span class="brand">Cache Buddy</span></span></div>
+        <div id="status"></div>
+        <div id="target">[devin] ```html &lt;!DOCTYPE html&gt; &lt;html lang="zh-CN"&gt;</div>
+        <button id="fixBtn" hidden></button>
+      </div>
+    </header>
+    <svg class="cursor" id="cur" viewBox="0 0 24 24" style="left:300px;top:150px;opacity:0">
+      <path d="M4 2l15 10-7 1.5L8.5 21z" fill="#1F2328" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div class="step" id="cap"></div>
+  <div class="ctl"><button id="pause">暂停</button><button id="next">下一步</button></div>
+</div>
+<script>
+const ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.2 8a5.2 5.2 0 1 1-1.6-3.75"/><path d="M13.4 2.6v3.1h-3.1"/></svg>';
+const $ = id => document.getElementById(id);
+const b = $("fixBtn"), st = $("status"), cur = $("cur"), line = $("ecgLine");
+let hover = false;
+
+function pill(kind) {
+  b.hidden = kind === "none";
+  b.className = kind === "busy" ? "busy" : kind === "err" ? "err" : "";
+  b.disabled = kind === "busy";
+  b.innerHTML = kind === "busy" ? '<i class="fxbar"></i><span>重启中</span>'
+    : ICON + "<span>" + (kind === "err" ? "再试一次" : "重启 Factory") + "</span>";
+  setHover(hover);
+}
+function setHover(on) {                  // :hover can't be forced: same values inline
+  hover = on;
+  const svg = b.querySelector("svg");
+  const ok = on && !b.disabled;
+  const err = b.classList.contains("err");
+  b.style.background = ok ? (err ? "#FBE8D8" : "#DDF3E8") : "";
+  b.style.borderColor = ok ? (err ? "#E9A877" : "#6CC9A0") : "";
+  if (svg) svg.style.transform = ok ? "rotate(-200deg)" : "";
+}
+function status(txt, col) { st.textContent = txt; st.style.color = col; line.style.stroke = col; }
+function cursorTo(el, show = true) {
+  const box = cur.parentElement.getBoundingClientRect(), r = el.getBoundingClientRect();
+  cur.style.left = (r.left - box.left + r.width * .55) + "px";
+  cur.style.top = (r.top - box.top + r.height * .45) + "px";
+  cur.style.opacity = show ? 1 : 0;
+}
+function cursorAway() { cur.style.left = "300px"; cur.style.top = "150px"; cur.style.opacity = 0; }
+let left = 20;
+function guarding() { status("守护中 · " + Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0") + " 后续期", "#3FA46A"); }
+
+const STEPS = [
+  [2600, "首次在 Factory 桌面版守护时：一句提示 + 一个小按钮", () => {
+    hover = false; cursorAway(); status("首次使用需要重启一次 Factory", "#E0A042"); pill("need"); }],
+  [2200, "鼠标悬停：颜色加深，图标转半圈（不会再变白）", () => { cursorTo(b); setTimeout(() => setHover(true), 450); }],
+  [3400, "点击后：状态变蓝，按钮变成进度条，期间不显示任何 CDP 报错", () => {
+    cur.classList.add("press"); setTimeout(() => cur.classList.remove("press"), 160);
+    setTimeout(() => { hover = false; status("正在重启 Factory…", "#5B8DD6"); pill("busy"); cursorAway(); }, 180); }],
+  [3000, "重启完成：按钮消失，回到守护中", () => {
+    pill("none"); left = 20; guarding(); }],
+  [2800, "如果没能重启：按钮变橙色「再试一次」，悬停可看原因", () => {
+    status("首次使用需要重启一次 Factory", "#E0A042"); pill("err"); }],
+];
+let i = 0, timer = null, paused = false;
+function show(k) {
+  i = k % STEPS.length;
+  [...$("steps").children].forEach((e, j) => e.classList.toggle("on", j === i));
+  $("cap").textContent = STEPS[i][1];
+  STEPS[i][2]();
+  clearTimeout(timer);
+  if (!paused) timer = setTimeout(() => show(i + 1), STEPS[i][0]);
+}
+setInterval(() => { if (i === 3 && left > 0) { left--; guarding(); } }, 1000);
+$("pause").onclick = () => { paused = !paused; $("pause").textContent = paused ? "继续" : "暂停"; if (!paused) show(i + 1); else clearTimeout(timer); };
+$("next").onclick = () => show(i + 1);
+[...$("steps").children].forEach((e, j) => e.onclick = () => show(j));
+show(0);
+</script></body></html>

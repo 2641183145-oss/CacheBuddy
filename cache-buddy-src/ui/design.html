@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="app.css">
+  <title>Cache Buddy · Mascot design sheet</title>
+  <style>
+    /* ---- design sheet only (app.css provides the white skin) ---- */
+    html,
+    body {
+      overflow: auto;
+      height: auto;
+    }
+
+    body {
+      background: linear-gradient(#FFFFFF, #F3F4F6);
+    }
+
+    .sheet {
+      position: relative;
+      z-index: 1;
+      padding: 34px 40px 60px;
+      max-width: 1340px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 4px;
+    }
+
+    .sub {
+      font-size: 12px;
+      color: #6B7280;
+      margin-bottom: 26px;
+    }
+
+    h2 {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 34px 0 14px;
+    }
+
+    h2 small {
+      font-weight: 400;
+      color: #6B7280;
+      font-size: 11px;
+      margin-left: 8px;
+    }
+
+    /* ------------- section 1: heart modes ------------- */
+    .hgrid {
+      display: grid;
+      grid-template-columns: repeat(8, 118px);
+      gap: 12px;
+    }
+
+    .hcell {
+      background: rgba(255, 255, 255, .62);
+      border: 1px solid rgba(255, 255, 255, .9);
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(16, 24, 40, .06);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 0 10px;
+    }
+
+    .hcell .mode {
+      font-size: 10px;
+      color: #6B7280;
+      margin-top: 6px;
+      font-family: "Cascadia Mono","Cascadia Code",Consolas,monospace;
+    }
+
+    .hstage {
+      position: relative;
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ------------- section 2: mascot grid ------------- */
+    .grid {
+      display: grid;
+      grid-template-columns: 120px repeat(8, 96px);
+      gap: 12px;
+      align-items: center;
+    }
+
+    .growlab {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .cell {
+      background: rgba(255, 255, 255, .62);
+      border: 1px solid rgba(255, 255, 255, .9);
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(16, 24, 40, .06);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 0 6px;
+    }
+
+    .cell .mascot {
+      position: relative;
+      width: 64px;
+      height: 64px;
+    }
+
+    .cell .mode {
+      font-size: 10px;
+      color: #6B7280;
+      margin-top: 4px;
+      font-family: "Cascadia Mono","Cascadia Code",Consolas,monospace;
+    }
+
+    .gheadlab {
+      font-size: 11px;
+      color: #6B7280;
+      text-align: center;
+    }
+
+    /* ------------- section 3: 形象原稿 ------------- */
+    .sheets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+    }
+
+    .famcard {
+      background: rgba(255, 255, 255, .62);
+      border: 1px solid rgba(255, 255, 255, .9);
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(16, 24, 40, .06);
+      padding: 18px;
+      width: 296px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .famcard .fname {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    /* static art only — no .fx layer, no mode class */
+    .famcard .big {
+      width: 200px;
+      height: 200px;
+      align-self: center;
+      position: relative;
+    }
+
+    .famcard .big .art {
+      width: 200px;
+      height: 200px;
+    }
+
+    .swatches {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .sw {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      font-family: "Cascadia Mono","Cascadia Code",Consolas,monospace;
+      color: #6B7280;
+    }
+
+    .sw i {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 0, 0, .08);
+      flex-shrink: 0;
+    }
+
+    .variants {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .vchip {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .vchip .mascot {
+      position: relative;
+      width: 64px;
+      height: 64px;
+      flex-shrink: 0;
+    }
+
+    .vchip span {
+      font-size: 9px;
+      color: #6B7280;
+      font-family: "Cascadia Mono","Cascadia Code",Consolas,monospace;
+    }
+
+    /* 原稿 + thumbnails are still frames: kill all mascot animation */
+    .mz-still .art,
+    .mz-still .art *,
+    .mz-still .fx,
+    .mz-still .fx * {
+      animation: none !important;
+    }
+
+    /* ------------- section 4: panel mock ------------- */
+    #mock {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .mock {
+      width: 490px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border-radius: 20px;
+      background: linear-gradient(#FFFFFF, #F3F4F6);
+      border: 1px solid #E5E7EB;
+    }
+
+    .mock .card {
+      pointer-events: none;
+    }
+
+    .mocklab {
+      font-size: 10px;
+      color: #6B7280;
+      font-family: "Cascadia Mono","Cascadia Code",Consolas,monospace;
+      text-align: center;
+    }
+
+    /* ------------- section 5: dock sliver + peek ------------- */
+    .nubrow {
+      display: flex;
+      gap: 26px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .ncell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ncell .lab {
+      font-size: 10px;
+      color: #6B7280;
+      font-family: "Cascadia Mono","Cascadia Code",Consolas,monospace;
+    }
+
+    .dockwrap,
+    .peekwrap {
+      background: linear-gradient(#EAEEF5, #DDE3EC);
+      border-radius: 4px;
+      padding: 18px 16px;
+      display: flex;
+      align-items: center;
+    }
+
+    /* dock sliver at true size: 10x56, edge corners square */
+    .ddock {
+      width: 10px;
+      height: 56px;
+      background: rgba(255, 255, 255, .62);
+      border: 1px solid rgba(255, 255, 255, .9);
+      box-shadow: 0 4px 14px rgba(16, 24, 40, .10);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .ddock.right {
+      border-radius: 8px 0 0 8px;
+      margin-right: -18px;
+    }
+
+    .ddock.left {
+      border-radius: 0 8px 8px 0;
+      margin-left: -18px;
+    }
+
+    .ddock i {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #9CA3AF;
+    }
+
+    /* peek card: heart ~34px + mascot ~40px, edge corners square */
+    .dpeek {
+      width: 64px;
+      background: rgba(255, 255, 255, .62);
+      border: 1px solid rgba(255, 255, 255, .9);
+      box-shadow: 0 8px 24px rgba(16, 24, 40, .08);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 0;
+      flex-shrink: 0;
+    }
+
+    .dpeek.right {
+      border-radius: 16px 0 0 16px;
+      margin-right: -18px;
+    }
+
+    .dpeek.left {
+      border-radius: 0 16px 16px 0;
+      margin-left: -18px;
+    }
+
+    .dpeek .heart {
+      width: 34px;
+      height: 34px;
+    }
+
+    .dpeek .mascot {
+      width: 34px;
+      height: 34px;
+      position: relative;
+    }
+
+    .dpeek .mstack {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="sheet">
+    <h1>Cache Buddy · Mascot design sheet</h1>
+    <div class="sub">header heart · card mascots · real brand marks — refresh to resync the grid</div>
+
+    <h2>1 · State heart<small>header heart in all 8 modes · guarding beats faster near due≈0</small></h2>
+    <div class="hgrid" id="hgrid"></div>
+
+    <h2>2 · Mascot grid<small>families × modes · 64px, no ring · eyeless marks live by rotation</small></h2>
+    <div class="grid" id="grid"></div>
+
+    <h2>3 · Character sheets<small>200px static art, no effects · palette · expression / rest–spin frames</small></h2>
+    <div class="sheets" id="sheets"></div>
+
+    <h2>4 · Panel mock<small>header + cache card as they appear in the app</small></h2>
+    <div class="mock" id="mock"></div>
+
+    <h2>5 · Dock & peek<small>dock sliver L/R · peek cards (heart + mascot, generic → heart only)</small></h2>
+    <div class="nubrow" id="nubs"></div>
+  </div>
+
+  <script src="mascots.js"></script>
+  <script>
+    const FAMS = [
+      ["claude", "Claude"],
+      ["devin", "Devin (SWE)"],
+      ["gpt", "GPT"],
+      ["gemini", "Gemini"],
+      ["kimi", "Kimi"],
+      ["glm", "GLM (Z.ai)"],
+    ];
+    const FAST = location.search.includes("fast");   // ?fast=1: spin 4s
+    const MODES = ["none", "loading", "guarding", "busy", "injecting", "sent",
+      "retry", "failed"];
+    const MLABEL = {
+      none: "Idle", loading: "Reading", guarding: "Guarding",
+      busy: "Busy", injecting: "Renewing", sent: "Renewed",
+      retry: "Retrying", failed: "Stopped"
+    };
+    const HEART_SVG =
+      '<svg class="heart" viewBox="0 0 24 24">' +
+      '<path class="hf" d="M12 20.5 C7 16 3.6 12.6 3.6 8.7 C3.6 6 5.7 4.2 8.1 4.2 C9.8 4.2 11.2 5 12 6.3 C12.8 5 14.2 4.2 15.9 4.2 C18.3 4.2 20.4 6 20.4 8.7 C20.4 12.6 17 16 12 20.5 Z"/>' +
+      '<path class="crack" d="M11.5 5.5 L10 10 L13 12 L10.8 17.5"/></svg>';
+    /* ---- section 1: heart in every mode.  app.css scopes its heart rules
+       to body.m-*; the sheet wraps each heart in a .m-<mode> container, so
+       clone the needed rules here scoped to .hcell/.hstage instead. */
+    const hstyle = document.createElement("style");
+    hstyle.textContent = `
+      .m-guarding .hf { fill: #3FA46A; }
+      .m-guarding .heart { animation: hb-beat var(--hr,1s) infinite; transform-origin:50% 55%; }
+      .m-busy .hf { fill: #E0A042; }
+      .m-busy .heart { animation: hb-calm 1.8s ease-in-out infinite; transform-origin:50% 55%; }
+      .m-injecting .hf { fill: #3FA46A; }
+      .m-injecting .heart { animation: hb-strong .7s ease-in-out infinite; transform-origin:50% 55%;
+        filter: drop-shadow(0 0 6px rgba(63,166,106,.55)); }
+      .m-sent .hf { fill: #3FA46A; }
+      .m-sent .heart { animation: hb-pop 1.4s ease-in-out infinite; transform-origin:50% 55%; }
+      .m-loading .hf { fill: #9CA3AF; }
+      .m-loading .heart { animation: hb-faint 2.6s ease-in-out infinite; transform-origin:50% 55%; }
+      .m-retry .hf { fill: #D14343; }
+      .m-retry .heart { animation: hb-flicker .5s steps(2) infinite; }
+      .m-none .hf { fill: none; stroke: #9CA3AF; stroke-width: 1.8; }
+      .m-failed .hf { fill: #9CA3AF; }
+      .m-failed .crack { display: block; }
+    `;
+    document.head.appendChild(hstyle);
+
+    const hgrid = document.getElementById("hgrid");
+    for (const mode of MODES) {
+      const c = document.createElement("div");
+      c.className = "hcell";
+      c.innerHTML =
+        `<div class="hstage m-${mode}">${HEART_SVG}</div>` +
+        `<div class="mode">${MLABEL[mode]}</div>`;
+      hgrid.appendChild(c);
+    }
+
+    /* ---- section 2: mascot grid ---- */
+    const grid = document.getElementById("grid");
+    grid.appendChild(document.createElement("div"));
+    for (const m of MODES) {
+      const h = document.createElement("div");
+      h.className = "gheadlab"; h.textContent = MLABEL[m];
+      grid.appendChild(h);
+    }
+    const cells = [];
+    for (const [fam, label] of FAMS) {
+      const r = document.createElement("div");
+      r.className = "growlab"; r.textContent = label;
+      grid.appendChild(r);
+      for (const mode of MODES) {
+        const c = document.createElement("div");
+        c.className = "cell";
+        c.innerHTML = '<div class="mascot"></div>' +
+          `<div class="mode">${mode}</div>`;
+        const inst = Mascots.create(c.querySelector(".mascot"),
+          { family: fam, mode: mode, spinEvery: FAST ? 4000 : undefined });
+        if (mode === "guarding") cells.push(inst);
+        grid.appendChild(c);
+      }
+    }
+    let due = 15;
+    setInterval(() => {
+      due = due <= 0 ? 15 : due - 1;
+      for (const i of cells) i.setDue(due);
+    }, 1000);
+
+    /* ---- section 3: 形象原稿 ---- */
+    const sheets = document.getElementById("sheets");
+    const SPIN_FRAMES = ["rest", "spin90", "spin180", "spin270"];
+    for (const [fam, label] of FAMS) {
+      const eyed = Mascots.eyed(fam);
+      const card = document.createElement("div");
+      card.className = "famcard";
+      const big = document.createElement("div");
+      big.className = "big mascot mz-still f-" + fam + " e-open"; // static: no fx layer, no motion
+      big.innerHTML = Mascots.art(fam, "open");
+      card.innerHTML = `<div class="fname">${label}</div>`;
+      card.appendChild(big);
+
+      const sw = document.createElement("div");
+      sw.className = "swatches";
+      for (const [hex, name] of Mascots.swatches(fam))
+        sw.innerHTML +=
+          `<div class="sw"><i style="background:${hex}"></i>${hex} ${name}</div>`;
+      card.appendChild(sw);
+
+      const vs = document.createElement("div");
+      vs.className = "variants";
+      if (fam === "kimi") {
+        // kimi has eyes but only blinks — show rest + blink frames
+        for (const [v, expr] of [["rest", "open"], ["blink", "closed"]]) {
+          const chip = document.createElement("div");
+          chip.className = "vchip";
+          const holder = document.createElement("div");
+          holder.className = "mascot mz-still f-" + fam + " e-" + expr;
+          holder.innerHTML = Mascots.art(fam, expr);
+          chip.appendChild(holder);
+          const lab = document.createElement("span");
+          lab.textContent = v;
+          chip.appendChild(lab);
+          vs.appendChild(chip);
+        }
+      } else if (eyed) {
+        for (const v of Mascots.exprs) {
+          const chip = document.createElement("div");
+          chip.className = "vchip";
+          const holder = document.createElement("div");
+          holder.className = "mascot mz-still f-" + fam + " e-" + v;
+          holder.innerHTML = Mascots.art(fam, "open");
+          chip.appendChild(holder);
+          const lab = document.createElement("span");
+          lab.textContent = v;
+          chip.appendChild(lab);
+          vs.appendChild(chip);
+        }
+      } else {
+        // eyeless: rest pose + rotation frames at 90°/180°/270°
+        for (const v of SPIN_FRAMES) {
+          const deg = { rest: 0, spin90: 90, spin180: 180, spin270: 270 }[v];
+          const chip = document.createElement("div");
+          chip.className = "vchip";
+          const holder = document.createElement("div");
+          holder.className = "mascot mz-still f-" + fam;
+          holder.innerHTML = Mascots.art(fam, "open");
+          const mk = holder.querySelector(".mark");
+          if (mk && deg) mk.setAttribute("transform", "rotate(" + deg + " 48 48)");
+          chip.appendChild(holder);
+          const lab = document.createElement("span");
+          lab.textContent = v;
+          chip.appendChild(lab);
+          vs.appendChild(chip);
+        }
+      }
+      card.appendChild(vs);
+      sheets.appendChild(card);
+    }
+
+    /* ---- section 4: two-track cache cards (fusion = lead + sidekick) ---- */
+    const mock = document.getElementById("mock");
+    function trackHTML(role, model, read, hit, meta, barPct, leftTxt, expired) {
+      const badge = { lead: "Lead", sidekick: "Sidekick" }[role] || "";
+      return `<div class="track">
+        <div class="crow">
+          <div class="mascot tm-${role}-${model.split("-")[0]}" data-fam=""></div>
+          ${badge ? `<span class="badge">${badge}</span>` : ""}
+          <span class="big">${read}</span>
+          <span class="pill">hit ${hit}%</span>
+        </div>
+        <div class="crow sub"><span class="tmodel">${model}</span><span class="tmeta">${meta}</span></div>
+        <div class="crow cbarrow">
+          <div class="cbar"><i style="width:${barPct}%;background:#3FA46A"></i></div>
+          <span class="tleft mono${expired ? " expired" : ""}">${leftTxt}</span>
+        </div>
+      </div>`;
+    }
+    mock.innerHTML = `
+      <div class="mock">
+        <header class="card" id="head">
+          <div class="stage"><div class="m-guarding" style="display:contents">${HEART_SVG}</div></div>
+          <div class="hinfo">
+            <div class="hrow">
+              <span class="brand">Cache Buddy</span>
+              <span class="hbtns"><button>—</button><button>×</button></span>
+            </div>
+            <div id="status" style="color:#3FA46A">Guarding · next in 3:41</div>
+            <div id="target">Anything · fusion-claude…-sidekick-swe-2</div>
+          </div>
+        </header>
+        <section class="card" id="cacheCard">
+          ${trackHTML("lead", "claude-opus-5-5-high", "812.4K", 96,
+      "≈$0.0211/turn · 2m ago", 0, "Cache expired", true)}
+          ${trackHTML("sidekick", "swe-2-high", "35.6K", 89,
+        "≈$0.0027/turn · 14s ago", 62, "Cache 3:06 left", false)}
+          <div class="cfoot">This cycle · Saved $1.374 · w/o cache $0.511</div>
+        </section>
+        <div class="mocklab">fusion · claude lead (expired) + swe sidekick (fresh)</div>
+      </div>
+      <div class="mock">
+        <header class="card">
+          <div class="stage"><div class="m-busy" style="display:contents">${HEART_SVG}</div></div>
+          <div class="hinfo">
+            <div class="hrow">
+              <span class="brand">Cache Buddy</span>
+              <span class="hbtns"><button>—</button><button>×</button></span>
+            </div>
+            <div id="status" style="color:#E0A042">Session busy · waiting</div>
+            <div id="target">Testing · fusion-gpt-6-sol-sidekick-glm-5.2</div>
+          </div>
+        </header>
+        <section class="card">
+          ${trackHTML("lead", "gpt-6-sol-high", "604.2K", 93,
+          "≈$0.0310/turn · 28s ago", 71, "Cache 3:33 left", false)}
+          ${trackHTML("sidekick", "glm-5.2-medium", "48.2K", 84,
+            "≈$0.0006/turn · 6s ago", 40, "Cache 2:00 left", false)}
+          <div class="cfoot">This cycle · Saved $0.902 · w/o cache $0.628</div>
+        </section>
+        <div class="mocklab">fusion · gpt lead + glm sidekick (Z.ai mark)</div>
+      </div>`;
+    for (const [sel, fam, mode] of [
+      [".tm-lead-claude", "claude", "guarding"],
+      [".tm-sidekick-swe", "devin", "guarding"],
+      [".tm-lead-gpt", "gpt", "busy"],
+      [".tm-sidekick-glm", "glm", "busy"],
+    ])
+      Mascots.create(mock.querySelector(sel), { family: fam, mode: mode });
+
+    /* ---- section 5: dock slivers + peek cards ---- */
+    const nubs = document.getElementById("nubs");
+    for (const [mode, side] of [["guarding", "right"], ["guarding", "left"],
+    ["busy", "right"], ["failed", "right"]]) {
+      const c = document.createElement("div");
+      c.className = "ncell";
+      const w = document.createElement("div");
+      w.className = "dockwrap";
+      const d = document.createElement("div");
+      d.className = "ddock " + side;
+      const dot = document.createElement("i");
+      dot.style.background = Mascots.colorOf(mode);
+      d.appendChild(dot);
+      w.appendChild(d);
+      const lab = document.createElement("div");
+      lab.className = "lab";
+      lab.textContent = `dock · ${mode} · ${side}`;
+      c.appendChild(w); c.appendChild(lab);
+      nubs.appendChild(c);
+    }
+    // peek cards: heart + one mascot per cache track (generic -> skipped)
+    for (const [fams, mode, side, lab2] of [
+      [["claude"], "guarding", "right", "claude · guarding"],
+      [["claude", "devin"], "busy", "right", "claude+swe · busy"],
+      [[], "sent", "right", "no model · sent"],
+      [["kimi"], "loading", "left", "kimi · loading"]]) {
+      const c = document.createElement("div");
+      c.className = "ncell";
+      const w = document.createElement("div");
+      w.className = "peekwrap";
+      const d = document.createElement("div");
+      d.className = "dpeek " + side;
+      const hs = document.createElement("div");
+      hs.className = "m-" + mode;
+      hs.style.display = "contents";
+      hs.innerHTML = HEART_SVG;
+      d.appendChild(hs);
+      if (fams.length) {
+        const stack = document.createElement("div");
+        stack.className = "mstack";
+        for (const f of fams) {
+          const m = document.createElement("div");
+          m.className = "mascot";
+          Mascots.create(m, {
+            family: f, mode: mode, side: side,
+            spinEvery: FAST ? 4000 : undefined
+          });
+          stack.appendChild(m);
+        }
+        d.appendChild(stack);
+      }
+      w.appendChild(d);
+      const lab = document.createElement("div");
+      lab.className = "lab";
+      lab.textContent = "peek · " + lab2 + " · " + side;
+      c.appendChild(w); c.appendChild(lab);
+      nubs.appendChild(c);
+    }
+  </script>
+</body>
+
+</html>

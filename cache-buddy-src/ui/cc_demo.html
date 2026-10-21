@@ -1,0 +1,460 @@
+<!doctype html>
+<!-- Claude Code panel preview without pywebview: loads the real index.html
+     page in an iframe-free way by mocking window.pywebview.api.
+     Open via `python -m http.server 8765` in ui/, ?mode=guarding|held|loading -->
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Cache Buddy CC demo</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+
+<body class="v-panel">
+  <script>
+  (() => {
+    const q = new URLSearchParams(location.search);
+    const mode = q.get("mode") || "guarding";
+    const now = Date.now() / 1000;
+    // renewals on the shared timeline: a real turn, then heartbeats
+    const renews = [now - 1150, now - 880, now - 610, now - 340, now - 3];
+    // three guarded sessions, each with its own model mark and state
+    const tracks = [
+      { sid: "9b45", title: "Cache buddy for Claude Code CLI", role: "single",
+        model: "claude-opus-5.5", family: "claude", read: 578900, hit: 94,
+        age_s: 6, cache_left: 266, cost: 0.3939, nocache_cost: 1.4500,
+        this_cycle: true, effort: "high", hb: 4, renews, mode: "guarding" },
+      { sid: "5162", title: "opus-5.5 integration", role: "single",
+        model: "claude-sonnet-5", family: "claude", read: 312400, hit: 91,
+        age_s: 41, cache_left: 96, cost: 0.0521, nocache_cost: 0.4100,
+        this_cycle: true, effort: "medium", hb: 2,
+        renews: [now - 900, now - 620, now - 340], mode: "guarding" },
+      { sid: "7c10", title: "Refactor mascot sprites", role: "single",
+        model: "gpt-5.6-sol", family: "gpt", read: 84500, hit: 88,
+        age_s: 12, cache_left: 0, cost: 0.0110, nocache_cost: 0.0900,
+        this_cycle: true, effort: null, hb: 1,
+        renews: [now - 640], mode: "busy" },
+    ];
+    // ?bk=devin: Devin's view — one Desktop session (otter) and two
+    // run from the terminal (Devin CLI), which carry the "CLI" tag
+    if (q.get("bk") === "devin") {
+      tracks.length = 0;
+      tracks.push(
+        { sid: "rc", title: "Casual Greeting", role: "lead", source: "desktop",
+          model: "swe-2-max", family: "devin", read: 16919, hit: 94,
+          age_s: 40, cache_left: 238, cost: 0, nocache_cost: 0,
+          this_cycle: true, hb: 0, renews: [now - 40], mode: "guarding" },
+        { sid: "rt", title: "Greeting", role: "lead", source: "cli",
+          model: "claude-sonnet-5-5-medium", family: "claude", read: 18892,
+          hit: 99, age_s: 75, cache_left: 205, cost: 0.0213, nocache_cost: 0.21,
+          this_cycle: true, hb: 2, renews: [now - 600, now - 330, now - 75],
+          mode: "guarding" },
+        { sid: "fx", title: "Fix flaky login test", role: "lead",
+          source: "cli", model: "gpt-6-astra-medium", family: "gpt",
+          read: 64200, hit: 91, age_s: 20, cache_left: 280, cost: 0.071,
+          nocache_cost: 0.64, this_cycle: true, hb: 0, renews: [now - 20],
+          mode: "none", guarded: false });
+      // &fusion=1: a Fusion session (Opus leads, SWE-2 is the sidekick)
+      // both kept warm, plus a plain Gemini session
+      if (q.get("fusion")) tracks.splice(0, tracks.length,
+        { sid: "fu", title: "Refactor payment retries", role: "lead", source: "cli",
+          model: "claude-opus-5-5-high", family: "claude", read: 486200, hit: 98,
+          age_s: 34, cache_left: 236, cost: 0.243, nocache_cost: 2.43,
+          this_cycle: true, hb: 3, renews: [now - 900, now - 610, now - 320, now - 34],
+          mode: "guarding" },
+        { sid: "fu", title: "", role: "sidekick", source: "cli",
+          model: "swe-2-high", family: "devinmark", read: 128400, hit: 96,
+          age_s: 51, cache_left: 219, cost: 0.0064, nocache_cost: 0.064,
+          this_cycle: true, hb: 3, renews: [now - 880, now - 590, now - 300, now - 51],
+          mode: "guarding" },
+        { sid: "gm", title: "Write API docs", role: "lead", source: "cli",
+          model: "gemini-4-argon-high", family: "gemini", read: 92300, hit: 93,
+          age_s: 70, cache_left: 200, cost: 0.0231, nocache_cost: 0.23,
+          this_cycle: true, hb: 1, renews: [now - 370, now - 70], mode: "guarding" });
+    }
+    // ?bk=droid: Factory's view — the guarded one runs from the CLI (CLI
+    // tag); Desktop sessions are listed but never guarded (exec can't
+    // renew them). Every row priced from the shared official price table
+    if (q.get("bk") === "droid") {
+      tracks.length = 0;
+      tracks.push(
+        { sid: "dr2", title: "remember the codeword PLUM", last_prompt: "Remember the codeword PLUM. Reply with exactly one word: ok",
+          role: "lead", source: "cli", model: "gpt-6-luna", family: "gpt",
+          read: 7549, hit: 99, age_s: 8, cache_left: 296, cost: 0.000093,
+          nocache_cost: 0.000772, this_cycle: true, hb: 3,
+          renews: [now - 900, now - 600, now - 300, now - 8],
+          mode: "guarding" },
+        { sid: "dr1", title: "PRD draft from the Linear backlog", last_prompt: "Help me draft a PRD: pull context from my backlog in Linear",
+          role: "lead", source: "desktop", model: "claude-opus-5-5",
+          family: "claude", read: 20841, hit: 96, age_s: 22, cache_left: 250,
+          cost: 0.0123, nocache_cost: 0.0915, this_cycle: true, hb: 0,
+          renews: [now - 22], mode: "none", guarded: false },
+        { sid: "dr3", title: "Fix the flaky droid exec test", role: "lead",
+          source: "desktop", model: "gpt-6-astra", family: "gpt", read: 131200,
+          hit: 92, age_s: 41, cache_left: 259, cost: 0.2463,
+          nocache_cost: 1.4271, this_cycle: true, hb: 0, renews: [now - 41],
+          mode: "none", guarded: false });
+    }
+    // ?n=<count>: that many tracks (cut, or cycled with new sids) — to see
+    // how the folded card's circles size with the session count
+    const nWant = Number(q.get("n") || 0);
+    if (nWant) {
+      const base = tracks.slice();
+      tracks.length = 0;
+      for (let i = 0; i < nWant; i++) {
+        const t = Object.assign({}, base[i % base.length]);
+        t.sid = t.sid + "-" + i;
+        t.cache_left = [262, 188, 0, 240, 96, 150, 30][i % 7];
+        t.mode = t.cache_left ? (i === 1 ? "busy" : "guarding") : "none";
+        tracks.push(t);
+      }
+    }
+    // ?promo=1 (promo/render.py): every session healthy, none expired
+    if (q.get("promo") && q.get("bk") !== "devin" && tracks[2])
+      Object.assign(tracks[2], { cache_left: 188, mode: "guarding", age_s: 112 });
+    const stopped = mode === "none";
+    if (stopped) for (const t of tracks) {
+      t.mode = "none"; t.guarded = false;
+    }
+    const qused = (q.get("qused") || "").split(",").filter(Boolean).map(Number);
+    const state = {
+      mode: stopped ? "none" : mode === "loading" || mode === "expired" ? mode : tracks[0].mode,
+      reason: { held: "not_running", loading: "no_capture" }[mode] || "",
+      target: stopped ? null
+        : { sid: "9b45", title: tracks[0].title, count: tracks.length },
+      status: "", left: "", due_in: mode === "guarding" ? 236 : null,
+      idle_secs: 270, cdp: true, brand: "Cache Buddy",
+      backend: q.get("bk") || "cc",
+      backends: q.get("bk") === "devin" ? ["cc", "devin"]
+        : q.get("bk") === "droid" ? ["cc", "devin", "droid"]
+        : ["cc", "devin"],
+      // the plan quota card, shaped like quota.py's real answers
+      quota: q.get("bk") === "devin" ? {
+        plan: "Pro", until: now + 10 * 86400, extra: 9.44, at: now - 40,
+        stale: false, error: null, windows: [
+          { key: "day", used: 0, resets_at: now + 9 * 3600 },
+          { key: "week", used: 77, resets_at: now + 2.4 * 86400 }] }
+        : q.get("bk") === "droid" ? {
+        plan: "", until: null, extra: null, at: now - 40, stale: false,
+        error: null, windows: [
+          { key: "5h", core: false, used: 1, resets_at: now + 3.5 * 3600 },
+          { key: "week", core: false, used: 1, resets_at: now + 6.3 * 86400 },
+          { key: "month", core: false, used: 30, resets_at: now + 20 * 86400 }] }
+        : null,
+      link: { label: "Proxy", ok: true,
+              title: "127.0.0.1:47821 \u2192 https://api.anthropic.com" },
+      last_log: q.get("fusion") ? "20:31:07 sidekick swe-2-high ✓ read 128400" :
+        "00:21:07 heartbeat sent -> Cache buddy for Claude Code CLI " +
+        "\u2713 read 578900",
+      guarded: mode === "loading" || stopped ? []
+        : tracks.filter(t => t.guarded !== false).map(t => t.sid),
+      // ?rescue=1: a rescue just happened (drives the real notice path)
+      rescued: q.get("rescue") ? { sid: "9b45", title: tracks[0].title,
+        usd: 2.86, at: now, seen: false } : null,
+      cache: mode === "loading" ? null : {
+        kind: stopped ? "\u4e0a\u8f6e" : "\u672c\u8f6e", saved: 3.42,
+        waiting_first: false,
+        rows: true, tracks, rescued: 2, buddy: true,
+      },
+      // this calendar month, made up: net Buddy savings per day
+      ledger: (() => {
+        const d0 = new Date();
+        const ym = d0.toISOString().slice(0, 7);
+        const n = new Date(d0.getFullYear(), d0.getMonth() + 1, 0).getDate();
+        const seeds = [0, 1.2, 0, 3.4, 0.6, 0, 0, 2.1, 4.8, 1.1, 0, 0.3,
+          2.6, 0, 0, 5.2, 1.9, 0.8, 0, 3.1, 0, 0, 1.4, 2.2, 0.5, 0, 3.9,
+          1.7, 2.8, 2.63, 1.1];
+        const days = [];
+        for (let i = 1; i <= n; i++) {
+          const day = ym + "-" + String(i).padStart(2, "0");
+          const v = seeds[i - 1] || 0;
+          days.push(v ? { day, net: v, saved: v + 0.4, hb_cost: 0.4,
+            rescues: Math.ceil(v / 1.3), hb: 4 + i % 5,
+            cache_saved: Math.round((60 + v * 30) * 100) / 100 }
+            : { day, net: 0 });
+        }
+        return { month: ym, days, first: "2026-09" };
+      })(),
+    };
+    // ?usage=1: the token card, from _usage_demo.json (real Tracker output)
+    // ?usage=promo: made-up numbers for a promo shot (_usage_promo.json;
+    // a missing period falls back to its week)
+    if (q.get("usage")) fetch(q.get("usage") === "promo" ? "_usage_promo.json" : "_usage_demo.json")
+      .then(r => r.json())
+      .then(u => { const b = u[state.backend]; if (b) { b.day = b.day || b.week; b.month = b.month || b.week; }
+        state.usage = b; }).catch(() => { });
+    const CTX = { "9b45": 735546, "7c10": 84500, "5162": 312400,
+      rc: 16919, rt: 18892, fx: 64200 };
+    const item = (sid, title, ago, live, ready, source) => ({
+      sid, title, last_activity: now - ago, live, ready, first_msg: "",
+      ctx: CTX[sid] || null, source
+    });
+    // ?qused=64,92: override the windows' used % (see the rings warm)
+    if (state.quota && qused.length)
+      state.quota.windows.forEach((w, k) => { if (qused[k] != null) w.used = qused[k]; });
+    const spaces = q.get("bk") === "devin" ? [      { type: "group", id: "d", name: "product", collapsed: false, items: [
+        item("rc", "Casual Greeting", 40, false, false, "desktop"),
+        item("ol2", "Otter mascot pass", 5 * 3600, false, false, "desktop")] },
+      { type: "session", ...item("rt", "Greeting", 75, true, true, "cli") },
+      { type: "session", ...item("fx", "Fix flaky login test", 20, true,
+        false, "cli"), locked: q.get("lock") === "1" },
+      { type: "session", ...item("ol", "Refactor otter sprites", 2 * 3600,
+        false, false, "desktop") },
+      { type: "session", ...item("lg", "A very long session title that " +
+        "has to ellipsize before the tag", 26 * 3600, false, false, "cli") },
+    ] : [
+      { type: "group", id: "a", name: "product", collapsed: false, items: [
+        item("9b45", "Cache buddy for Claude Code CLI", 5, true, true),
+        item("7c10", "Refactor mascot sprites", 3 * 3600, false, false)] },
+      { type: "group", id: "b", name: "System32", collapsed: false, items: [
+        item("5162", "opus-5.5 integration", 1800, true, false)] },
+    ];
+    // ?many=1: three folders holding 14 sessions (the auto-fold rule)
+    if (q.get("many")) spaces.splice(0, spaces.length,
+      ...["alpha", "beta", "gamma"].map((g, j) => ({ type: "group", id: "m" + j,
+        name: g, collapsed: false, items: Array.from({ length: [6, 5, 3][j] },
+          (_, i) => item(g + i, g + " session " + (i + 1), (i + 1) * 900, false, false)) })));
+    const settings = { lang: q.get("lang") || "zh", maint_min: 30 };   // ⚙
+    window.pywebview = { api: new Proxy({
+      state: async () => state, spaces: async () => spaces,
+      rescan: async () => spaces,
+      settings: async () => settings,
+      set_setting: async (k, v) => (settings[k] = v, settings),
+      // ?bk=droid: right-click -> carry to Devin (made-up numbers)
+      carry_targets: async () => state.backend === "droid" ? ["devin"] : [],
+      // signed in to A; &accts=1 leaves only A (no "Droid ▸" then)
+      droid_accounts: async () => state.backend !== "droid" ? []
+        : [{ org: "orgA", name: "A", current: true }]
+          .concat(q.get("accts") === "1" ? [] : [{ org: "orgB", name: "B", current: false }]),
+      droid_copy: () => new Promise(r => setTimeout(() => r(q.get("cfail")
+        ? { error: "failed", detail: "disk full" } : { session_id: "copy-1" }), 1200)),
+      carry_preview: async () => ({ after: { user_messages: 6, assistant_messages: 9,
+        tool_calls: 14, tokens: 48200 }, trimmed_calls: 2,
+        warnings: q.get("cwarn") ? [{ kind: "large" }] : [] }),
+      // the window's height follows the page (_WinCtl.fit_panel): the
+      // demo shows it as the panel's own height over a darker backdrop
+      panel_fit: (h, ms) => {
+        const p = document.getElementById("panel");
+        p.style.transition = "height " + (ms || 150) + "ms cubic-bezier(.33,1,.68,1)";
+        p.style.height = h ? h + "px" : "";
+        // what's past the window's bottom edge: the desktop, not panel
+        p.style.boxShadow = h ? "0 0 0 9999px #2B2F36" : "";
+        document.body.dataset.fit = h;
+      },
+    }, { get: (t, k) => t[k] || (() => null) }) };
+  })();
+  </script>
+  <script>
+    // borrow the real panel markup + scripts, then boot like pywebview does
+    const load = src => new Promise(r => {
+      const s = document.createElement("script"); s.src = src; s.onload = r;
+      document.body.appendChild(s);
+    });
+    fetch("index.html").then(r => r.text()).then(async html => {
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      doc.querySelectorAll("script").forEach(s => s.remove());
+      document.body.insertAdjacentHTML("afterbegin", doc.body.innerHTML);
+      await load("ecg.js"); await load("mascots.js");
+      await load("app.js");
+      window.dispatchEvent(new Event("pywebviewready"));
+      setView(new URLSearchParams(location.search).get("view") || "panel",
+        "right");
+      if (new URLSearchParams(location.search).get("menu")) setTimeout(() => document.getElementById("hkBtn").click(), 300);
+      // ?measure=1: write each card's box into <body data-m>, for --dump-dom.
+      // Headless Edge has a minimum window width, so pin the page to the
+      // real panel's 340px first or nothing ever has to wrap.
+      if (new URLSearchParams(location.search).get("measure") ||
+          new URLSearchParams(location.search).get("w340")) {
+        const pin = document.createElement("style");
+        pin.textContent = "html,body{width:340px!important;max-width:340px!important}";
+        document.head.appendChild(pin);
+      }
+      if (new URLSearchParams(location.search).get("measure")) setTimeout(() => {
+        const r = id => { const b = document.getElementById(id).getBoundingClientRect();
+          return id + "=" + Math.round(b.top) + "+" + Math.round(b.height); };
+        const balls = [...document.querySelectorAll(".cball")].map(b => {
+          const x = b.getBoundingClientRect(); return Math.round(x.top) + "/" + Math.round(x.width); });
+        const fb = document.getElementById("cacheFold").getBoundingClientRect();
+        const xs = [...document.querySelectorAll(".cball")].map(b => {
+          const x = b.getBoundingClientRect(); return Math.round(x.left) + "-" + Math.round(x.right); });
+        document.body.dataset.x = "fold=" + Math.round(fb.left) + "-" + Math.round(fb.right) +
+          " panelW=" + Math.round(document.getElementById("panel").getBoundingClientRect().width) +
+          " x=" + xs.join(",");
+        document.body.dataset.m = ["head", "quotaCard", "cacheCard", "cacheHead",
+          "cacheFold", "sessCard", "saveCard", "controls"].map(r).join(" ") + " balls=" + balls.join(",");
+      }, 1500);
+      // ?fold=1: cache card folded (what it keeps: summary + dots)
+      if (new URLSearchParams(location.search).get("fold"))
+        setTimeout(() => document.getElementById("cacheHead").click(), 500);
+      // ?hover=<i>: simulate hover on circle i (for screenshots)
+      const hoverIdx = new URLSearchParams(location.search).get("hover");
+      if (hoverIdx !== null) setTimeout(() => {
+        const box = document.getElementById("cacheFold");
+        if (!box) return;
+        const balls = [...box.querySelectorAll(".cball")];
+        const idx = parseInt(hoverIdx);
+        const fakeT = S && S.cache && S.cache.tracks && S.cache.tracks[idx]
+          ? S.cache.tracks[idx]
+          : {title:"remember the codeword PLUM",model:"gpt-6-luna",
+             last_prompt:"Remember the codeword PLUM. Reply with exactly one word: ok"};
+        if (balls[idx]) foldHoverIn(box, balls[idx], idx, fakeT);
+      }, 1800);
+      // ?roll=<ms>: freeze the name roll at that point. Pause it BEFORE
+      // renderTree, so the rows paint at their --rd offset instead of
+      // running to the end before the screenshot.
+      const rollAt0 = new URLSearchParams(location.search).get("roll");
+      if (rollAt0) setTimeout(() => {
+        const st = document.createElement("style");
+        st.textContent = ".stitle.roll>span{animation-play-state:paused!important}";
+        document.head.appendChild(st);
+        // top-level `let rollAt` in app.js is reachable by name from
+        // another classic script, so no eval is needed
+        rollAt = Date.now() - Number(rollAt0 || 0);
+        renderTree();
+      }, 600);
+      // ?busy=quota|sess: hold the refresh animation mid-flight
+      const busyWhat = new URLSearchParams(location.search).get("busy");
+      if (busyWhat) setTimeout(() => {
+        const card = busyWhat === "quota" ? "quotaCard" : "sessCard";
+        const btn = busyWhat === "quota" ? "btnQuota" : "btnRefresh";
+        document.getElementById(card).classList.add("busy");
+        document.getElementById(btn).classList.add("spinning");
+        // hold both mid-flight, or a screenshot catches them at 0deg
+        for (const st of document.styleSheets)
+          try {
+            for (const r of st.cssRules)
+              if (r.animationName === "spin" || r.animationName === "qsweep")
+                Object.assign(r.style, { animationDelay: "-.35s",
+                  animationPlayState: "paused" });
+          } catch (e) { }
+      }, 400);
+      // ?tok=1: the token card open (sessions folded to its head);
+      // &tp=day|week|month: then pick that period (the thumb slides)
+      if (new URLSearchParams(location.search).get("tok")) {
+        setTimeout(() => document.getElementById("toTok").click(), 700);
+        const tp = new URLSearchParams(location.search).get("tp");
+        if (tp) setTimeout(() => tkGo(["day", "week", "month"].indexOf(tp)), 1300);
+        // &tkdrag=X: the knob held and dragged to X px on the track (no
+        // release: the shot shows it mid-drag, stretched by its speed)
+        const tx = new URLSearchParams(location.search).get("tkdrag");
+        if (tx !== null) setTimeout(() => {
+          const d = document.getElementById("segTok"), r = d.getBoundingClientRect();
+          const at = (type, x) => d.dispatchEvent(new PointerEvent(type, { bubbles: true,
+            button: 0, pointerId: 1, clientX: r.left + x, clientY: r.top + 10 }));
+          at("pointerdown", 40);
+          const to = Number(tx);
+          for (let k = 1; k <= 6; k++) setTimeout(() => at("pointermove", 40 + (to - 40) * k / 6), k * 16);
+        }, 1400);
+      }
+      // ?tkflip=from,to,ms: one calendar flip, held at ms in (for a shot)
+      const tf = new URLSearchParams(location.search).get("tkflip");
+      if (tf) setTimeout(() => {
+        const [f, t, ms] = tf.split(",").map(Number);
+        tkFlip(f, t);
+        for (const an of document.querySelector(".tkflap").getAnimations()) {
+          an.pause(); an.currentTime = ms;
+        }
+      }, 1500);
+      // ?htip=<day>: hover that day's savings square (its tooltip)
+      const hd = new URLSearchParams(location.search).get("htip");
+      if (hd) setTimeout(() => {
+        const c = document.querySelectorAll("#heat .hc")[Number(hd) - 1];
+        const r = c.getBoundingClientRect();
+        c.dispatchEvent(new MouseEvent("mousemove", { bubbles: true,
+          clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }));
+      }, 1500);
+      // ?open=<k>: click token row k (its detail unfolds)
+      const openK = new URLSearchParams(location.search).get("open");
+      if (openK !== null) setTimeout(() => {
+        const r = document.querySelector('.tkrow[data-k="' + openK + '"]');
+        if (r) r.click();
+        // ?freeze=<ms>: hold every animation/transition that far in
+        const fz = new URLSearchParams(location.search).get("freeze");
+        if (fz) setTimeout(() => document.getAnimations()
+          .forEach(an => an.pause()), Number(fz));
+      }, Number(new URLSearchParams(location.search).get("at") || 1500));
+      // ?flip=<ms>: press the mini chart, freeze that far into the roll
+      const flipAt = new URLSearchParams(location.search).get("flip");
+      if (flipAt) setTimeout(() => {
+        document.getElementById("toTok").click();
+        setTimeout(() => document.getAnimations().forEach(an => an.pause()), Number(flipAt));
+      }, 1200);
+      // ?fan=1: the folder's sheets as when hovered
+      if (new URLSearchParams(location.search).get("fan")) {
+        const st = document.createElement("style");
+        st.textContent = ".fold3 .sh{transform:translate(calc(var(--x) * 1.5),-3px) rotate(calc(var(--r) * 1.6))!important}.fold3 .front{transform:scaleY(.92)!important}";
+        document.head.appendChild(st);
+      }
+      // ?tip=<i>: hover chart column i (the white tooltip)
+      const tipI = new URLSearchParams(location.search).get("tip");
+      if (tipI !== null) setTimeout(() => {
+        const c = document.querySelectorAll(".tkcol")[Number(tipI)];
+        const b = c.getBoundingClientRect();
+        c.dispatchEvent(new MouseEvent("mousemove", { bubbles: true,
+          clientX: b.left + b.width / 2, clientY: b.bottom - 4 }));
+      }, 2200);
+      // ?period=day|week|month: press that period button
+      const per = new URLSearchParams(location.search).get("period");
+      if (per) setTimeout(() => document.querySelector('#segTok [data-p="' + per + '"]').click(), 1000);
+      // ?launch=<sid>&lat=<ms>: select a row, press Start guard, freeze
+      const lsid = new URLSearchParams(location.search).get("launch");
+      if (lsid) setTimeout(() => {
+        const r = document.querySelector('.sitem[data-sid="' + lsid + '"]');
+        if (r) r.click();
+        setTimeout(() => {
+          document.getElementById("btnGuard").click();
+          const lat = Number(new URLSearchParams(location.search).get("lat") || 0);
+          if (lat) setTimeout(() => document.getAnimations().forEach(an => an.pause()), lat);
+        }, 200);
+      }, 1200);
+      // ?qfold=1: the quota card folded to its one-window line;
+      // &qtick=N: then skip ahead N windows; &qbusy=1: its ⟳ held running
+      if (new URLSearchParams(location.search).get("qfold")) {
+        setTimeout(() => document.getElementById("quotaHead").click(), 700);
+        const qn = Number(new URLSearchParams(location.search).get("qtick") || 0);
+        for (let k = 0; k < qn; k++)
+          setTimeout(() => document.getElementById("quotaTick").click(), 900 + k * 700);
+        if (new URLSearchParams(location.search).get("qbusy"))
+          setTimeout(() => setBusy("quota", true), 1000);
+      }
+      // ?qmorph=P: the quota fold animation frozen at progress P (0..1);
+      // with qfold=1 it's the unfold. The page clock stops for the shot.
+      const qm = new URLSearchParams(location.search).get("qmorph");
+      if (qm !== null) setTimeout(() => {
+        const T = 1e6;
+        performance.now = () => T;
+        window.requestAnimationFrame = cb => setTimeout(() => cb(T + Number(qm) * MORPH_MS), 30);
+        window.cancelAnimationFrame = id => clearTimeout(id);
+        document.getElementById("quotaHead").click();
+      }, 1800);
+      // ?sfold=1: the sessions card folded (the window hugs the cards)
+      if (new URLSearchParams(location.search).get("sfold"))
+        setTimeout(() => document.getElementById("drum").click(), 600);
+      // ?rmenu=1: right-click the first row; ?rmenu=2: and pick the target;
+      // ?rmenu=acct: point at "Droid ▸" (bk=droid); ?rmenu=copy: pick account B
+      const rm = new URLSearchParams(location.search).get("rmenu");
+      if (rm) setTimeout(() => {
+        const r = document.querySelector(".sitem");
+        const b = r.getBoundingClientRect();
+        r.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true,
+          clientX: b.left + 60, clientY: b.top + 10 }));
+        if (rm === "2") setTimeout(() => document.querySelector("#rowMenu button").click(), 400);
+        if (rm === "acct" || rm === "copy") setTimeout(() => {
+          const sub = document.querySelector("#rowMenu .hassub");
+          if (sub) sub.dispatchEvent(new MouseEvent("mouseenter"));
+          if (rm === "copy") setTimeout(() => document.querySelector("#acctMenu button").click(), 200);
+        }, 400);
+      }, 1400);
+      // ?set=1: the ⚙ popover open
+      if (new URLSearchParams(location.search).get("set")) setTimeout(() => document.getElementById("btnSet").click(), 600);
+      // ?lock=1: the locked row scrolled into view, its Start guard pressed
+      if (new URLSearchParams(location.search).get("lock")) setTimeout(() => {
+        const r = document.querySelector('.sitem[data-sid="fx"]');
+        r.scrollIntoView({ block: "center" }); r.click();
+        document.getElementById("btnGuard").click();
+      }, 600);
+    });
+  </script>
+</body>
+
+</html>

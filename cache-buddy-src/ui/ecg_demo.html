@@ -1,0 +1,149 @@
+<!doctype html>
+<!-- ECG glyph preview: the small heartbeat cell at its real 44px size,
+     plus magnified copies so the sweep and QRS are visible.
+     python -m http.server 8765  in ui/  ->  /ecg_demo.html -->
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Cache Buddy — ECG preview</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      background: #F5F6F7;
+      font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+      color: #1F2328;
+    }
+
+    .row {
+      display: flex;
+      align-items: flex-end;
+      gap: 26px;
+      padding: 20px 24px 8px;
+    }
+
+    .cell {
+      text-align: center;
+    }
+
+    .cell .box {
+      background: #fff;
+      border-radius: 12px;
+      padding: 8px;
+      box-shadow: 0 6px 16px rgba(16, 24, 40, .07);
+      display: inline-block;
+      line-height: 0;
+    }
+
+    .cell h4 {
+      margin: 8px 0 2px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .cell p {
+      margin: 0;
+      font-size: 10.5px;
+      color: #9CA3AF;
+    }
+
+    h3 {
+      margin: 22px 24px 0;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .4px;
+      color: #9CA3AF;
+      text-transform: uppercase;
+    }
+
+    .hdr {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 18px 24px 0;
+      padding: 9px 11px;
+      width: 300px;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 6px 16px rgba(16, 24, 40, .07);
+    }
+
+    .hdr .t {
+      font-size: 13px;
+      font-weight: 600;
+      color: #3FA46A;
+    }
+
+    .hdr .s {
+      font-size: 10.5px;
+      color: #9CA3AF;
+      margin-top: 1px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="hdr">
+    <canvas id="inline" width="44" height="44"
+      style="width:44px;height:44px"></canvas>
+    <div>
+      <div class="t">Guarding · next in 3:55</div>
+      <div class="s">Cache buddy for Claude Code CLI</div>
+    </div>
+  </div>
+
+  <h3>actual size (44px)</h3>
+  <div class="row" id="row1"></div>
+
+  <h3>magnified (132px)</h3>
+  <div class="row" id="row2"></div>
+
+  <script src="ecg.js"></script>
+  <script>
+    const STATES = [
+      { id: "guard", label: "Guarding", note: "green sweep", color: "#3FA46A" },
+      { id: "busy", label: "Busy", note: "broad beat, amber", color: "#E0A042", wave: "wide" },
+      { id: "fail", label: "Stopped", note: "flat, sweep still runs", color: "#D14343", flat: true },
+      { id: "dead", label: "Unguarded", note: "flat line, sweep still runs", color: "#9CA3AF", flat: true },
+    ];
+
+    /* a renewal every IDLE s, so the "landed beat" glow can be demoed */
+    const IDLE = 12, T0 = Date.now() / 1000 - 5;
+    const beats = [];
+    for (let t = T0; t < T0 + 86400; t += IDLE) beats.push(t);
+
+    const all = [];
+    for (const box of ["row1", "row2"]) {
+      const size = box === "row1" ? 44 : 132;
+      for (const st of STATES) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.innerHTML = '<div class="box"><canvas style="width:' + size +
+          'px;height:' + size + 'px"></canvas></div><h4></h4><p></p>';
+        cell.querySelector("h4").textContent = st.label;
+        cell.querySelector("p").textContent = st.note;
+        document.getElementById(box).appendChild(cell);
+        all.push({
+          ecg: new Ecg(cell.querySelector("canvas"), {
+            size, color: st.color, flat: !!st.flat, wave: st.wave || "qrs",
+            beats: st.id === "guard" ? beats : [],
+          }),
+          st,
+        });
+      }
+    }
+    const inline = new Ecg(document.getElementById("inline"),
+      { size: 44, color: "#3FA46A", beats });
+
+    function frame() {
+      const now = Date.now() / 1000;
+      for (const p of all) p.ecg.draw(now);
+      inline.draw(now);
+      requestAnimationFrame(frame);
+    }
+    frame();
+  </script>
+</body>
+
+</html>

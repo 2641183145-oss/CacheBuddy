@@ -1,0 +1,4191 @@
+/* Cache Buddy — white frosted glass, neutral skin.
+   State colors appear only where they mean state (heart, bar, glow). */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: "Segoe UI Variable Text", "Segoe UI",
+    "Microsoft YaHei UI", sans-serif;
+  color: #1F2328;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+/* display face for headings, the brand and the big token number */
+.brand,
+#status,
+.big,
+.shead,
+.growlab,
+.fname {
+  font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif;
+}
+
+.mono,
+.tmeta,
+.tleft,
+#logline,
+.stime {
+  font-family: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+}
+
+/* tabular digits keep countdowns and token counts from jittering */
+#status,
+.big,
+.tmeta,
+.tleft,
+.stime,
+.cfoot {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------- see-through glass w/ white veil
+   html/body are transparent; the layered-window alpha (~6%) plus this
+   near-opaque veil keep the desktop tint very faint and guarantee that
+   text behind the window stays unreadable in every view. */
+#blobs {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: rgba(255, 255, 255, .95);
+}
+
+.blob {
+  display: none;
+}
+
+/* ------------------------------------------------ glass cards */
+#panel {
+  position: relative;
+  /* the panel is laid out for 340px; a wider window must not stretch it
+     (body stays 100%: the dock sliver and the peek card are far narrower) */
+  max-width: 340px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 10px 8px;
+}
+
+/* strict column: everything but the sessions card keeps its height,
+   so controls/footer can never be pushed out of the 540px panel —
+   the sessions card absorbs the slack instead */
+#panel>* {
+  flex: none;
+}
+
+#sessCard {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#sessCard .shead {
+  flex: none;
+}
+
+.card {
+  background: rgba(255, 255, 255, .62);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, .9);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, .06),
+    inset 0 1px 0 rgba(255, 255, 255, .8);
+  padding: 10px 12px;
+}
+
+/* ------------------------------------------------ header + heartbeat */
+#head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.stage {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.heart {
+  width: 44px;
+  height: 44px;
+  overflow: visible;
+}
+
+.heart .hf {
+  fill: #9CA3AF;
+  transition: fill .4s;
+}
+
+.heart .crack {
+  display: none;
+  fill: none;
+  stroke: #F3F4F6;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+/* mode looks — set via body.m-<mode> */
+body.m-guarding .hf {
+  fill: #3FA46A;
+}
+
+body.m-guarding .heart {
+  animation: hb-beat var(--hr, 1s) infinite;
+  transform-origin: 50% 55%;
+}
+
+@keyframes hb-beat {
+
+  /* lub-dub double pulse */
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  12% {
+    transform: scale(1.14);
+  }
+
+  24% {
+    transform: scale(1);
+  }
+
+  38% {
+    transform: scale(1.09);
+  }
+
+  52% {
+    transform: scale(1);
+  }
+}
+
+body.m-busy .hf {
+  fill: #E0A042;
+}
+
+body.m-busy .heart {
+  animation: hb-calm 1.8s ease-in-out infinite;
+  transform-origin: 50% 55%;
+}
+
+@keyframes hb-calm {
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+body.m-injecting .hf {
+  fill: #3FA46A;
+}
+
+body.m-injecting .heart {
+  animation: hb-strong .7s ease-in-out infinite;
+  transform-origin: 50% 55%;
+  filter: drop-shadow(0 0 6px rgba(63, 166, 106, .55));
+}
+
+@keyframes hb-strong {
+
+  0%,
+  100% {
+    transform: scale(1)
+  }
+
+  35% {
+    transform: scale(1.22)
+  }
+}
+
+body.m-sent .hf {
+  fill: #3FA46A;
+}
+
+body.m-sent .heart {
+  animation: hb-pop 1.4s ease-in-out infinite;
+  transform-origin: 50% 55%;
+}
+
+@keyframes hb-pop {
+  0% {
+    transform: scale(1);
+  }
+
+  14% {
+    transform: scale(1.3);
+  }
+
+  32%,
+  100% {
+    transform: scale(1);
+  }
+}
+
+body.m-sent .stage::before,
+body.m-sent .stage::after {
+  /* two tiny sparkles */
+  content: "";
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  background: #F0B33C;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  animation: hb-spark 1.4s ease-in-out infinite;
+}
+
+body.m-sent .stage::before {
+  right: 0;
+  top: 4px;
+}
+
+body.m-sent .stage::after {
+  left: 2px;
+  top: 9px;
+  animation-delay: .35s;
+}
+
+@keyframes hb-spark {
+
+  0%,
+  60%,
+  100% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+
+  30% {
+    transform: scale(1) rotate(20deg);
+    opacity: 1;
+  }
+}
+
+body.m-loading .hf {
+  fill: #9CA3AF;
+}
+
+body.m-loading .heart {
+  animation: hb-faint 2.6s ease-in-out infinite;
+  transform-origin: 50% 55%;
+}
+
+@keyframes hb-faint {
+  50% {
+    transform: scale(1.05);
+    opacity: .55;
+  }
+}
+
+body.m-retry .hf {
+  fill: #D14343;
+}
+
+body.m-retry .heart {
+  animation: hb-flicker .5s steps(2) infinite;
+}
+
+@keyframes hb-flicker {
+  50% {
+    opacity: .35;
+  }
+}
+
+body.m-none .hf {
+  fill: none;
+  stroke: #9CA3AF;
+  stroke-width: 1.8;
+}
+
+body.m-failed .hf {
+  fill: #9CA3AF;
+}
+
+body.m-failed .crack {
+  display: block;
+}
+
+.hinfo {
+  flex: 1;
+  min-width: 0;
+}
+
+/* the heartbeat cell: a 44px ECG. The sweep is the "current" passing
+   through; it runs on a loop, and keeps running even when the line is
+   flat (nothing being kept warm). */
+.ecg {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: block;
+}
+.hrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1F2328;
+  letter-spacing: -.1px;
+}
+
+button {
+  border: 1px solid #E5E7EB;
+  background: #FFFFFF;
+  color: #1F2328;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .06);
+  cursor: default;
+}
+
+button:hover {
+  background: #F9FAFB;
+}
+
+button:disabled {
+  color: #9CA3AF;
+  box-shadow: none;
+}
+
+.hbtns button {
+  color: #6B7280;
+  font-size: 13px;
+  width: 22px;
+  height: 20px;
+  border-radius: 6px;
+  line-height: 1;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hbtns button:hover {
+  background: #F3F4F6;
+  color: #1F2328;
+}
+
+#status {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 5px;
+}
+
+#target {
+  font-size: 11px;
+  color: #9CA3AF;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Droid Desktop without CDP: a small pill under the status that restarts
+   Factory. Outlined in the app's green; while restarting it becomes a
+   progress strip. The id outranks the generic button:hover white. */
+#fixBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  position: relative;
+  overflow: hidden;
+  height: 24px;
+  margin-top: 6px;
+  padding: 0 10px 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: #ECF8F2;
+  color: #047857;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+
+#fixBtn[hidden] {
+  display: none;
+}
+
+#fixBtn svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform .4s cubic-bezier(.3, .9, .3, 1);
+}
+
+#fixBtn:hover:not(:disabled) {
+  background: #DDF3E8;
+  color: #04694C;
+}
+
+#fixBtn:hover:not(:disabled) svg {
+  transform: rotate(-200deg);
+}
+
+#fixBtn:active:not(:disabled) {
+  background: #CFEEDF;
+}
+
+#fixBtn:focus-visible {
+  outline: 2px solid #10B981;
+  outline-offset: 2px;
+}
+
+/* restarting: calm blue, a light sweep running across the pill */
+#fixBtn.busy,
+#fixBtn.busy:disabled {
+  min-width: 96px;
+  border: 0;
+  background: #EEF3FB;
+  color: #3F6FB8;
+  cursor: default;
+}
+
+#fixBtn .fxbar {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(91, 141, 214, .28), transparent);
+  transform: translateX(-100%);
+  animation: fxSweep 1.1s ease-in-out infinite;
+}
+
+#fixBtn.busy span {
+  position: relative;
+}
+
+#fixBtn.busy span::after {
+  content: "";
+  display: inline-block;
+  width: 1.2em;
+  text-align: left;
+  animation: fxDots 1.2s steps(4) infinite;
+}
+
+@keyframes fxSweep {
+  to { transform: translateX(100%); }
+}
+
+@keyframes fxDots {
+  0% { content: ""; }
+  25% { content: "."; }
+  50% { content: ".."; }
+  75% { content: "..."; }
+}
+
+#fixBtn.err {
+  border: 0;
+  background: #FDF3EA;
+  color: #B4541A;
+}
+
+#fixBtn.err:hover {
+  background: #FBE8D8;
+  color: #9A4514;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #fixBtn .fxbar, #fixBtn.busy span::after { animation: none; }
+}
+
+/* ------------------------------------------- savings heatmap */
+#saveCard {
+  position: relative;
+  z-index: 3;                     /* its day tooltip over the controls */
+  padding: 8px 12px 10px;
+}
+
+#saveCard[hidden] {
+  display: none;
+}
+
+#saveCard .shead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.stotal {
+  margin-left: 6px;
+  font-weight: 600;
+  color: #3FA46A;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------ refresh feedback */
+/* ⟳ turning while a refresh is out: the numbers may not change, so the
+   button itself has to say "working". One turn per 900ms, never a blur. */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinning {
+  animation: spin .9s linear infinite;
+  transform-origin: 50% 50%;
+}
+
+/* a refresh may come back with the same numbers, so the card shows it's
+   working even then */
+/* a fetch is out: the rings turn slowly and the card breathes — driven
+   from app.js (setBusy) so each loop can finish its round instead of
+   snapping back when the answer lands */
+
+/* the sessions list dims a touch while its ⟳ runs */
+#sessCard.busy #tree {
+  opacity: .55;
+}
+
+/* ------------------------------------------------ plan quota */
+/* compact: the panel is a fixed 540px and the sessions card absorbs the
+   slack, so the quota is one title line + one row of columns */
+#quotaCard {
+  flex: none;
+  padding: 7px 12px 8px;
+}
+
+#quotaCard[hidden] {
+  display: none;
+}
+
+/* the fold's tape (app.js morphQuota): drawn over the card in its own
+   px, with the rings as they were fading out underneath */
+#quotaCard {
+  position: relative;
+}
+
+.qmorph {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.qghost {
+  position: absolute;
+  display: flex;
+  gap: 14px;
+}
+
+.qmsvg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.qhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6B7280;
+  margin-bottom: 5px;
+}
+
+.qtitle,
+.qside {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.qplan {
+  margin-left: 2px;
+  font-weight: 600;
+  color: #9CA3AF;
+}
+
+.qmeta {
+  font-weight: 400;
+  color: #9CA3AF;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#btnQuota {
+  border: 0;
+  background: transparent;
+  color: #9CA3AF;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 1px 3px;
+  border-radius: 5px;
+}
+
+#btnQuota:hover {
+  color: #374151;
+  background: #F3F4F6;
+}
+
+/* the title folds the card */
+#quotaHead {
+  cursor: pointer;
+  border-radius: 7px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  flex: none;
+}
+
+#quotaHead:hover {
+  background: rgba(255, 255, 255, .75);
+}
+
+#quotaHead:focus-visible {
+  outline: 2px solid rgba(63, 164, 106, .45);
+}
+
+/* folded: only the title line, one window on it at a time, no meta */
+.qtick {
+  display: none;
+}
+
+#quotaCard.folded .qtick {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 8px;
+  margin-left: 6px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+#quotaCard.folded .qhead {
+  margin-bottom: 0;
+  gap: 6px;
+}
+
+#quotaCard.folded .qrings,
+#quotaCard.folded .qmeta,
+#quotaCard.folded .qnote {
+  display: none;
+}
+
+/* the window up now: dot · short name · bar, like a legend row of the
+   rings laid flat (no number: the tooltip has it) */
+.qtin {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 6px;
+}
+
+.qtdot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  transition: background .6s;
+}
+
+.qtlab {
+  flex: none;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  color: #6B7280;
+}
+
+.qtbar {
+  position: relative;
+  flex: 1;
+  min-width: 30px;
+  height: 5px;
+  border-radius: 3px;
+  overflow: hidden;                 /* the ⟳ shine stays inside */
+  background: color-mix(in srgb, var(--c) 16%, #EEF0F2);
+  transition: background .6s;
+}
+
+.qtbar > i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-radius: 3px;
+  background: var(--c);
+  transition: width .9s cubic-bezier(.3, 1, .4, 1), background-color .6s;
+}
+
+.qtbar.hot {
+  animation: qtbarhot 1.8s ease-in-out infinite;
+}
+
+@keyframes qtbarhot {
+  50% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 22%, transparent); }
+}
+
+/* ⟳ while folded: a soft light sweeps along the track (filled part
+   and all) until the answer lands, then the bar grows in again (JS) */
+.qtbar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
+  opacity: 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, .85), rgba(255, 255, 255, 0));
+  transform: translateX(-100%);
+  pointer-events: none;
+}
+
+.qtick.busy .qtbar::after {
+  opacity: 1;
+  animation: qtshine 1.1s ease-in-out infinite;
+}
+
+.qtick.busy .qtdot {
+  animation: qtdotbusy 1.1s ease-in-out infinite;
+}
+
+@keyframes qtshine {
+  to { transform: translateX(250%); }
+}
+
+@keyframes qtdotbusy {
+  50% { transform: scale(.6); opacity: .55; }
+}
+
+/* pager: a dot per window in its colour, the one up stretched to a dash */
+.qtpage {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.qtpage[hidden] {
+  display: none;
+}
+
+.qtpage i {
+  width: 4px;
+  height: 4px;
+  border-radius: 2px;
+  opacity: .35;
+  transition: width .3s, opacity .3s, background .6s;
+}
+
+.qtpage i.on {
+  width: 10px;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qtbar.hot,
+  .qtick.busy .qtbar::after,
+  .qtick.busy .qtdot { animation: none; }
+}
+
+/* concentric rings (longest window outside) + a legend with the numbers;
+   a second pool (Droid Core) sits beside as its own cluster */
+.qrings {
+  display: flex;
+  gap: 14px;
+}
+
+.qring {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.qring svg {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.qring circle {
+  fill: none;
+}
+
+/* the track is the ring's own colour, faint: the whole ring warms */
+.qtrack {
+  stroke-opacity: .13;
+  transition: stroke .6s;
+}
+
+.qarc {
+  stroke-linecap: round;
+  transition: stroke-dasharray .9s cubic-bezier(.3, 1, .4, 1), stroke .6s, opacity .3s;
+}
+
+/* a small light dot rides the arc's end */
+.qtip {
+  fill: #fff;
+  opacity: 0;
+  transform-origin: 29px 29px;
+  transform-box: view-box;
+  transition: transform .9s cubic-bezier(.3, 1, .4, 1), opacity .3s;
+}
+
+/* nearly out: the ring breathes */
+.qarc.hot {
+  animation: qhot 1.8s ease-in-out infinite;
+}
+
+@keyframes qhot {
+  50% { stroke-opacity: .6; }
+}
+
+.qlegend {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.ql {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 10.5px;
+  color: #4B5563;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.ql i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  align-self: center;
+  transition: background .6s;
+}
+
+.qlab {
+  flex: none;
+}
+
+.qpct {
+  margin-left: auto;
+  font-weight: 600;
+  color: #1F2937;
+  font-variant-numeric: tabular-nums;
+  transition: color .6s;
+}
+
+.qreset {
+  font-size: 9.5px;
+  color: #9CA3AF;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.qnote {
+  font-size: 10px;
+  color: #9A6B10;
+  margin-top: 4px;
+  line-height: 1.35;
+}
+
+.qnote[hidden] {
+  display: none;
+}
+
+/* last numbers kept from before a miss / a restart: still shown, greyed */
+#quotaCard.stale .qrings {
+  opacity: .55;
+}
+
+/* month pager: ‹ October 2026 › */
+.mnav {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  color: #6B7280;
+}
+
+.mnav button {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 6px;
+  color: #6B7280;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.mnav button:hover:not(:disabled) {
+  background: #F3F4F6;
+  color: #1F2328;
+}
+
+.mnav button:disabled {
+  color: #D1D5DB;
+}
+
+#mLabel {
+  min-width: 84px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* a month in 2 rows of 16: days 1-16, then 17-31 */
+.heat {
+  display: grid;
+  grid-template-columns: repeat(16, minmax(0, 14px));
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.heat .hc {
+  aspect-ratio: 1;
+  border-radius: 3.5px;
+  background: #EEF0F2;
+  transition: transform .12s ease;
+}
+
+.heat .hc.l1 { background: #C6EBD3; }
+.heat .hc.l2 { background: #8ED2A6; }
+.heat .hc.l3 { background: #52B57B; }
+.heat .hc.l4 { background: #2E8B57; }
+
+.heat .hc.future {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px #EEF0F2;
+}
+
+.heat .hc:not(.future):hover {
+  transform: scale(1.18);
+}
+
+.htip {
+  position: absolute;
+  z-index: 6;
+  pointer-events: none;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .97);
+  color: #374151;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, .12), 0 1px 3px rgba(16, 24, 40, .08),
+    inset 0 0 0 1px rgba(16, 24, 40, .05);
+  animation: tippop .16s cubic-bezier(.3, 1.4, .5, 1) both;
+}
+
+/* shown again on the next hover: the pop plays once per appearance */
+@keyframes tippop {
+  from { opacity: 0; transform: translateY(3px) scale(.96); }
+}
+
+.htip[hidden] {
+  display: none;
+}
+
+.htip b {
+  color: #2F8F57;
+  font-weight: 600;
+}
+
+.htip .dim {
+  color: #9CA3AF;
+}
+
+/* ---------------------------------------------- harness picker */
+#head {
+  position: relative;
+  z-index: 5;                /* the menu drops over the cache card */
+}
+
+.brandrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hk {
+  position: relative;
+  display: inline-flex;
+}
+
+.hk[hidden] {
+  display: none;
+}
+
+#hkBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 24px;
+  padding: 0 5px 0 4px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 7px;
+}
+
+#hkBtn:hover,
+#hkBtn[aria-expanded="true"] {
+  background: #F3F4F6;
+}
+
+#hkIcon,
+.hico {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+}
+
+#hkIcon svg,
+.hico svg {
+  width: 100%;
+  height: 100%;
+}
+
+.caret {
+  width: 0;
+  height: 0;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  border-top: 4px solid #9CA3AF;
+}
+
+.hkmenu {
+  position: absolute;
+  top: 28px;
+  left: 0;
+  min-width: 150px;
+  padding: 4px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(16, 24, 40, .14);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hkmenu[hidden] {
+  display: none;
+}
+
+.hkmenu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 7px;
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.hkmenu button:hover {
+  background: #F3F4F6;
+}
+
+.hkmenu button.on {
+  font-weight: 600;
+}
+
+.hkmenu button.on::after {
+  content: "✓";
+  margin-left: auto;
+  color: #3FA46A;
+}
+
+.hkmenu button:disabled {
+  opacity: .45;
+}
+
+/* ⚙ — same box as the minimize/close buttons, a line gear */
+#btnSet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#btnSet .gear {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#btnSet[aria-expanded="true"] {
+  background: #F3F4F6;
+  color: #1F2328;
+}
+
+/* the settings popover drops over the cache card, like the harness menu */
+.setpop {
+  position: absolute;
+  top: 40px;
+  right: 10px;
+  z-index: 7;
+  padding: 10px 12px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(16, 24, 40, .14);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.setpop[hidden] {
+  display: none;
+}
+
+.setrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: #3A332C;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------ cache card */
+.crow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.crow+.crow {
+  margin-top: 4px;
+}
+
+/* one .track per model role (lead/sidekick), hairline between them */
+.track+.track {
+  border-top: 1px solid rgba(16, 24, 40, .07);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.track .mascot {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+}
+
+/* compact rows when several sessions are guarded: the name gets the
+   room and the numbers step back */
+#tracks.multi .track .ttitle {
+  font-size: 11.5px;
+}
+
+#tracks.multi .track .big {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+#tracks.multi .track .mascot {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+}
+
+#tracks.multi .crow+.crow {
+  margin-top: 3px;
+}
+
+#tracks.multi .track+.track {
+  margin-top: 6px;
+  padding-top: 6px;
+}
+
+#tracks.multi .pill {
+  font-size: 9.5px;
+  padding: 1px 6px;
+}
+
+/* Claude Code rows name their session; the token count right-aligns */
+.track .ttitle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.track .ttitle+.big {
+  flex: 0 0 auto;
+}
+
+/* drop one guarded session; only shown when several are guarded */
+.tdrop {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #C3C8CF;
+  font-size: 14px;
+  line-height: 1;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 5px;
+  opacity: 0;
+  transition: opacity .15s;
+}
+
+.track:hover .tdrop {
+  opacity: 1;
+}
+
+.tdrop:hover {
+  background: #F3F4F6;
+  color: #D14343;
+}
+
+.tmodel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crow .tmeta {
+  margin-left: auto;
+  /* beats .sub span+span's 8px gap */
+  white-space: nowrap;
+}
+
+.cfoot {
+  font-size: 10px;
+  color: #6B7280;
+  margin-top: 8px;
+}
+
+/* empty cache card: no track rows, just the centered message with
+   equal breathing room top and bottom */
+#cacheCard.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 14px;
+  padding-bottom: 14px;
+  text-align: center;
+}
+
+#cacheCard.empty #tracks {
+  display: none;
+}
+
+#cacheCard.empty .cfoot {
+  margin-top: 0;
+  font-size: 12px;
+}
+
+#cacheCard.empty .wait {
+  margin-top: 3px;
+  font-size: 11px;
+  color: #9CA3AF;
+}
+
+.badge {
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: #F3F4F6;
+  color: #6B7280;
+  font-weight: 600;
+}
+
+.big {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 9px;
+  background: #E8F5EC;
+  color: #2F7A4A;
+}
+
+.sub {
+  font-size: 11px;
+  color: #6B7280;
+}
+
+.sub span+span {
+  margin-left: 8px;
+}
+
+.hint {
+  font-size: 11px;
+  color: #9CA3AF;
+}
+
+.empty {
+  font-size: 12px;
+  color: #9CA3AF;
+  padding: 4px 0;
+}
+
+/* cache-life bar */
+.cbarrow {
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.cbar {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: #E5E7EB;
+  overflow: hidden;
+}
+
+.cbar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 2px;
+  background: #9CA3AF;
+  transition: width .6s linear, background .4s;
+}
+
+.tleft {
+  font-size: 10px;
+  color: #6B7280;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tleft.expired {
+  color: rgba(209, 67, 67, .8);
+}
+
+/* ------------------------------------------------ sessions */
+.shead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6B7280;
+  margin-bottom: 4px;
+}
+
+#btnRefresh {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  color: #6B7280;
+  font-size: 13px;
+  width: 22px;
+  height: 20px;
+  border-radius: 6px;
+}
+
+#btnRefresh:hover {
+  background: #F3F4F6;
+  color: #1F2328;
+}
+
+#tree {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#tree::-webkit-scrollbar {
+  width: 5px;
+}
+
+#tree::-webkit-scrollbar-thumb {
+  background: #E5E7EB;
+  border-radius: 3px;
+}
+
+.ghead {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #6B7280;
+  font-weight: 600;
+  padding: 3px 2px;
+}
+
+/* group header folder: closed/open line icons, 120ms crossfade */
+.ghead .fold {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+}
+
+.ghead .fold svg {
+  position: absolute;
+  inset: 0;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: #6B7280;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity .12s;
+}
+
+.ghead .fold .fo-open {
+  opacity: 0;
+}
+
+.ghead:not(.closed) .fold .fo-open {
+  opacity: 1;
+}
+
+.ghead:not(.closed) .fold .fo-closed {
+  opacity: 0;
+}
+
+.gitems {
+  margin: 2px 0 4px 8px;
+  padding: 2px;
+  background: rgba(255, 255, 255, .5);
+  border-radius: 10px;
+}
+
+.ghead.closed+.gitems {
+  display: none;
+}
+
+.sitem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.sitem:hover {
+  background: rgba(255, 255, 255, .8);
+}
+
+.sitem.sel {
+  background: #F3F4F6;
+}
+
+/* name + optional source tag: the pair takes the row's spare width, the
+   title alone shrinks, so the tag always sits right after the text */
+.sitem .sname {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sitem .stitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* "CLI": Devin sessions run from the terminal — a quiet grey pill, no
+   stroke, so it reads as metadata rather than a button */
+.srctag {
+  flex: 0 0 auto;
+  font: 600 9px/1 "Segoe UI", system-ui, sans-serif;
+  letter-spacing: .3px;
+  color: #6B7280;
+  background: #EEF0F3;
+  border-radius: 4px;
+  padding: 2px 4px 2px;
+}
+
+.srctag[hidden] {
+  display: none;
+}
+
+/* the row's 8px gap already separates tag and model; .sub span+span's
+   extra 8px would push the model name off, hidden tag or not */
+.crow.sub .srctag {
+  margin-right: -3px;
+}
+
+.crow.sub .srctag+.tmodel {
+  margin-left: 0;
+}
+
+.sitem .stime {
+  font-size: 10px;
+  color: #9CA3AF;
+  flex: 0 0 auto;
+}
+
+/* guarded-session marker — own class so it never inherits .heart's
+   44px svg sizing; sits inline on the title baseline */
+.sitem .gheart {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #3FA46A;
+  font-size: 9px;
+  line-height: 1;
+  animation: beat 1s infinite;
+}
+
+/* locked: a CLI opened before Buddy — sits where the guarded heart does,
+   still (it isn't beating), amber like the held state */
+.sitem .glock {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 11px;
+  fill: none;
+  stroke: #C98A1B;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.locknote {
+  margin-top: 6px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: #FFF6E5;
+  color: #7A5200;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-line;
+  cursor: pointer;
+}
+
+.locknote[hidden] {
+  display: none;
+}
+
+/* ------------------------------------------------ carry a session */
+/* right-click menu: same look as the harness picker */
+.rowmenu {
+  position: absolute;
+  z-index: 8;
+  min-width: 140px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(16, 24, 40, .14);
+  display: flex;
+  flex-direction: column;
+  animation: tippop .14s cubic-bezier(.3, 1.4, .5, 1) both;
+}
+
+.rowmenu[hidden] {
+  display: none;
+}
+
+.rowmenu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 7px;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rowmenu button:hover,
+.rowmenu button:focus-visible {
+  background: #F3F4F6;
+  outline: none;
+}
+
+.rowmenu .hico,
+.carrycard .ccfrom,
+.carrycard .ccto {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+
+.rowmenu .hico svg,
+.carrycard .ccfrom svg,
+.carrycard .ccto svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* "Droid ▸": opens the accounts flyout */
+.rowmenu button.hassub::after {
+  content: "";
+  margin: 0 3px 0 auto;
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid #9CA3AF;
+  border-top: 1.5px solid #9CA3AF;
+  transform: rotate(45deg);
+}
+
+.rowmenu button.hassub {
+  gap: 8px;
+  padding-right: 6px;
+}
+
+/* the flyout's rows lead with the account's letter */
+.rowmenu .hico.acct {
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: #ECF8F2;
+  color: #047857;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+#acctMenu {
+  z-index: 9;
+  min-width: 110px;
+}
+
+/* a short sessions card would clip the menus: let them out while open */
+#sessCard:has(.rowmenu:not([hidden])) {
+  overflow: visible;
+  z-index: 6;                    /* over the savings card (z 3) below */
+}
+
+/* the confirm card: floats over the list, the two harness marks with an
+   arrow, the session's title, what carrying would do */
+.carryscrim {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  border-radius: 18px;
+  background: rgba(246, 247, 249, .55);
+  backdrop-filter: blur(2px);
+  animation: tippop .18s ease-out both;
+}
+
+.carryscrim[hidden] {
+  display: none;
+}
+
+/* over the whole panel, centred a little above the middle */
+.carrycard {
+  position: absolute;
+  z-index: 21;
+  left: 18px;
+  right: 18px;
+  top: 30%;
+  padding: 12px 13px 11px;
+  background: #fff;
+  border-radius: 13px;
+  box-shadow: 0 12px 32px rgba(16, 24, 40, .16), inset 0 0 0 1px rgba(16, 24, 40, .05);
+  animation: tippop .18s cubic-bezier(.3, 1.4, .5, 1) both;
+}
+
+.carrycard[hidden] {
+  display: none;
+}
+
+.cchead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cchead .ccfrom,
+.cchead .ccto {
+  width: 22px;
+  height: 22px;
+  padding: 3px;
+  border-radius: 7px;
+  background: #F3F4F6;
+}
+
+.ccarrow {
+  color: #9CA3AF;
+  font-size: 13px;
+}
+
+.cctitle {
+  margin-top: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1F2328;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ccstats {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #4B5563;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.ccsub {
+  margin-top: 2px;
+  font-size: 10px;
+  color: #9CA3AF;
+}
+
+.ccwarn {
+  margin-top: 6px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: #FFF6E5;
+  color: #7A5200;
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.ccwarn[hidden] {
+  display: none;
+}
+
+.carrycard.done .ccstats {
+  color: #2F8F57;
+  font-weight: 600;
+}
+
+.carrycard.fail .ccstats {
+  color: #C2413D;
+}
+
+.ccbtns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+/* copy to the other Factory account: a see-through toast, the panel
+   still visible behind; the left Droid tosses a file to the right one
+   (the arc and the catch run from app.js, Web Animations) */
+.xfer {
+  position: absolute;
+  z-index: 22;
+  left: 50%;
+  top: 34%;
+  width: 196px;
+  margin-left: -98px;
+  padding: 12px 12px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .5);
+  backdrop-filter: blur(6px) saturate(1.2);
+  box-shadow: 0 10px 30px rgba(16, 24, 40, .14), inset 0 0 0 1px rgba(255, 255, 255, .6);
+  pointer-events: none;
+  animation: xin .22s cubic-bezier(.3, 1.4, .5, 1) both;
+}
+
+.xfer[hidden] {
+  display: none;
+}
+
+.xfer.out {
+  animation: xout .26s ease-in both;
+}
+
+@keyframes xin {
+  from { opacity: 0; transform: translateY(6px) scale(.92); }
+}
+
+@keyframes xout {
+  to { opacity: 0; transform: translateY(-4px) scale(.96); }
+}
+
+.xstage {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  height: 54px;
+  padding: 0 10px;
+}
+
+.xdroid {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transform-origin: 50% 100%;
+}
+
+.xdroid .xmark {
+  display: block;
+  width: 30px;
+  height: 30px;
+  padding: 5px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(16, 24, 40, .1);
+}
+
+.xdroid .xmark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.xdroid b {
+  font-size: 10px;
+  font-weight: 700;
+  color: #047857;
+}
+
+.xfile {
+  position: absolute;
+  left: 30px;
+  top: 6px;
+  width: 13px;
+  height: 16px;
+  border-radius: 2px 5px 2px 2px;
+  background: linear-gradient(135deg, #fff 0 60%, #D1FAE5 60%);
+  box-shadow: inset 0 0 0 1.4px #10B981;
+  opacity: 0;
+}
+
+/* lines on the page, so it reads as a document */
+.xfile::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  right: 4px;
+  top: 6px;
+  height: 5px;
+  border-top: 1.2px solid #6EE7B7;
+  border-bottom: 1.2px solid #6EE7B7;
+}
+
+.xok {
+  position: absolute;
+  right: -5px;
+  top: -5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 0 2px #fff;
+  transform: scale(0);
+  transition: transform .26s cubic-bezier(.3, 1.6, .5, 1);
+}
+
+.xok::after {
+  content: "";
+  position: absolute;
+  left: 4.6px;
+  top: 2.6px;
+  width: 3px;
+  height: 6px;
+  border: solid #fff;
+  border-width: 0 1.6px 1.6px 0;
+  transform: rotate(45deg);
+}
+
+.xfer.done .xok {
+  transform: scale(1);
+}
+
+.xmsg {
+  margin-top: 8px;
+  min-height: 15px;
+  text-align: center;
+  font-size: 11px;
+  color: #4B5563;
+}
+
+.xfer.done .xmsg {
+  color: #2F8F57;
+  font-weight: 600;
+}
+
+.xfer.fail .xmsg {
+  color: #C2413D;
+}
+
+.xfer.fail .xfile {
+  display: none;
+}
+
+.ccbtns button {
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ccbtns .ccyes:not(:disabled) {
+  color: #2F8F57;
+  border-color: #CDEBD9;
+}
+
+.ccbtns button[hidden] {
+  display: none;
+}
+
+/* session state dots (Claude Code): solid = proxied, ring = running */
+.sitem .sdot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.sitem .sdot.ready {
+  background: #3FA46A;
+}
+
+.sitem .sdot.live {
+  border: 1.5px solid #9CA3AF;
+}
+
+@keyframes beat {
+  50% {
+    transform: scale(1.35);
+  }
+}
+
+/* ------------------------------------------------ controls */
+#controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 0 2px;
+}
+
+.seg {
+  display: flex;
+  border-radius: 10px;
+  background: #F3F4F6;
+  border: 1px solid #E5E7EB;
+  padding: 2px;
+}
+
+.seg button {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 4px 9px;
+  font-size: 11px;
+  color: #6B7280;
+  border-radius: 8px;
+}
+
+.seg button.on {
+  background: #FFFFFF;
+  color: #1F2328;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, .12);
+}
+
+/* the three controls share one height and the same soft press */
+#controls>* {
+  height: 32px;
+}
+
+#controls button {
+  transition: transform .12s, box-shadow .2s, background .2s, color .2s;
+}
+
+#controls button:not(:disabled):active {
+  transform: scale(.96);
+}
+
+/* interval: a white thumb slides between the two values */
+.ivseg {
+  position: relative;
+  align-items: center;
+  border-radius: 11px;
+  padding: 2px;
+}
+
+.ivthumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, .12), 0 0 0 .5px rgba(16, 24, 40, .04);
+  transition: transform .3s cubic-bezier(.3, 1.3, .5, 1), width .3s cubic-bezier(.3, 1.3, .5, 1);
+}
+
+.ivseg button {
+  position: relative;               /* above the thumb */
+  height: 100%;
+  padding: 0 9px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.ivseg button.on {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* the original look — white, plain text; the feedback is in the press
+   and in what the rest of the panel does (see "control feedback") */
+button.primary,
+button.secondary {
+  position: relative;
+  overflow: hidden;                 /* keeps the press ripple inside */
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button.primary {
+  flex: 1;
+  color: #1F2328;
+}
+
+button.primary.stop {
+  color: #D14343;
+}
+
+button:disabled {
+  opacity: 1;
+  /* color already says disabled */
+}
+
+/* ------------------------------------------------ footer */
+footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+  font-size: 10px;
+  color: #6B7280;
+}
+
+#logline {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}
+
+#cdp {
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+#cdp i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9CA3AF;
+  display: inline-block;
+}
+
+#cdp.ok i {
+  background: #3FA46A;
+}
+
+button.tiny {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #6B7280;
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 5px;
+}
+
+button.tiny:hover {
+  background: #F3F4F6;
+  color: #1F2328;
+}
+
+/* ------------------------------------------------ views
+   body.v-dock / v-peek / v-panel — one layer visible at a time.
+   Edge-side corners stay square, outer corners round; body.left
+   mirrors them. */
+#dock,
+#peek {
+  display: none;
+}
+
+body.v-dock #panel,
+body.v-dock #peek,
+body.v-peek #panel,
+body.v-peek #dock,
+body.v-panel #dock,
+body.v-panel #peek {
+  display: none;
+}
+
+/* ------------------------------------------------ launch splash
+   The window opens centred at the splash's size, the app icon's pinwheel
+   spins, the text fades, and python flies the window into the dock while
+   the logo (fixed, sized in vmin) shrinks with it. First launch (.first)
+   also says how to get the panel back. */
+#splash {
+  display: none;
+}
+
+body.v-splash #panel,
+body.v-splash #dock,
+body.v-splash #peek {
+  display: none;
+}
+
+body.v-splash #splash {
+  position: fixed;
+  inset: 0;
+  /* the panel's cards are opaque; the splash has only the veil, so it
+     carries the same white itself — text behind stays unreadable */
+  background: linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(246, 250, 248, .92));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 22px;
+  text-align: center;
+}
+
+body.v-splash.first #splash {
+  justify-content: flex-start;
+  padding-top: 22px;
+}
+
+/* holds the logo's place in the column; the logo itself is fixed so it
+   can stay put while the text fades and the window flies */
+#splash::before {
+  content: "";
+  flex: none;
+  height: var(--sp-logo, 76px);
+}
+
+#spLogo {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: min(var(--sp-logo, 76px), 72vmin);
+  height: min(var(--sp-logo, 76px), 72vmin);
+  transform: translate(calc(-50% + var(--sp-dx, 0px)), calc(-50% + var(--sp-dy, 0px)));
+  filter: drop-shadow(0 6px 14px rgba(4, 120, 87, .22));
+  opacity: 0;                          /* until the window is shown */
+}
+
+body.sp-on #spLogo {
+  opacity: 1;
+  animation: spIn .5s cubic-bezier(.2, .9, .3, 1.25) both;
+}
+
+body.first {
+  --sp-logo: 64px;
+}
+
+@keyframes spIn {
+  from { opacity: 0; scale: .6; }
+}
+
+#spBlades {
+  transform-box: view-box;
+  transform-origin: 128px 128px;
+}
+
+/* spins up, then keeps turning */
+body.sp-on #spBlades {
+  animation: spWind 1.1s cubic-bezier(.5, 0, .9, .5) .15s both,
+             spTurn .62s linear 1.25s infinite;
+}
+
+body.sp-on.first #spBlades {
+  animation: spWind 1.1s cubic-bezier(.5, 0, .9, .5) .15s both,
+             spTurn 2.4s linear 1.25s infinite;   /* idles while reading */
+}
+
+body.sp-on.sp-leave #spBlades {
+  animation: spTurn .36s linear infinite;          /* whoosh to the edge */
+}
+
+@keyframes spWind {
+  from { rotate: 0deg; }
+  to { rotate: 360deg; }
+}
+
+@keyframes spTurn {
+  from { rotate: 0deg; }
+  to { rotate: 360deg; }
+}
+
+.sptext {
+  margin-top: 12px;
+  opacity: 0;
+}
+
+body.sp-on .sptext {
+  opacity: 1;
+  animation: spFade .4s .12s both;
+}
+
+.spbrand {
+  font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1F2328;
+  letter-spacing: .2px;
+}
+
+.spsub {
+  margin-top: 3px;
+  font-size: 12px;
+  color: #6B7280;
+  transition: color .3s;
+}
+
+.spsub.ok {
+  color: #047857;
+}
+
+.sphint {
+  display: none;
+  width: 100%;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(31, 35, 40, .08);
+  text-align: left;
+  opacity: 0;
+}
+
+body.sp-on .sphint {
+  opacity: 1;
+  animation: spFade .4s .3s both;
+}
+
+body.first .sphint {
+  display: block;
+}
+
+body.first .spsub {
+  display: none;
+}
+
+.sphtitle {
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1F2328;
+}
+
+.sprow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 12px;
+  color: #4B5563;
+}
+
+.sprow b {
+  flex: none;
+  min-width: 60px;
+  padding: 1px 7px;
+  white-space: nowrap;
+  border-radius: 6px;
+  background: #F1F3F2;
+  font-weight: 600;
+  font-size: 11.5px;
+  color: #374151;
+  text-align: center;
+}
+
+/* the one gesture to remember */
+.sprow.key b {
+  background: #DCF5EA;
+  color: #047857;
+}
+
+.sprow.key span {
+  color: #1F2328;
+  font-weight: 600;
+}
+
+#spGo {
+  display: block;
+  width: 100%;
+  height: 34px;
+  margin-top: 14px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #047857, #10B981);
+  color: #FFFFFF;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(4, 120, 87, .25);
+  transition: filter .15s, transform .1s;
+}
+
+#spGo:hover {
+  filter: brightness(1.06);
+}
+
+#spGo:active {
+  transform: scale(.98);
+}
+
+#spGo:focus-visible {
+  outline: 2px solid #047857;
+  outline-offset: 2px;
+}
+
+@keyframes spFade {
+  from { opacity: 0; transform: translateY(4px); }
+}
+
+/* leaving: everything but the logo fades, then the window flies */
+body.sp-on.sp-leave .sptext,
+body.sp-on.sp-leave .sphint {
+  opacity: 0;
+  transition: opacity .16s;
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.sp-on #spLogo, body.sp-on .sptext, body.sp-on .sphint { animation: none; }
+  body.sp-on #spBlades { animation: none; }
+}
+
+/* dock: 10x56 sliver hugging the screen edge, one state dot */
+body.v-dock #dock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  /* solid white: the edge halo (edge_halo.py) paints this exact white
+     at the window's alpha, so rim and body can't show a seam */
+  background: #FFFFFF;
+  border-radius: 9999px;               /* capsule — both ends round */
+}
+
+body.v-dock.left #dock {
+  border-radius: 9999px;
+}
+
+#dockDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #9CA3AF;
+  transition: background .4s;
+}
+
+/* peek: a 64px card — the header's ECG, the hot session's countdown, and
+   one ringed mark per session. A capsule (python clips the window to the
+   same shape), plain glass, no glow or outline. */
+body.v-peek #peek {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0;
+  width: 100%;
+  height: 100%;
+  /* the round ends eat the corners: keep the ECG and the last ring
+     inside the straight part */
+  padding: 16px 4px 14px;
+  box-sizing: border-box;
+  overflow: hidden;
+  /* solid white: the edge halo (edge_halo.py) paints this exact white
+     at the window's alpha, so rim and body can't show a seam */
+  background: #FFFFFF;
+  border-radius: 9999px;               /* capsule */
+}
+
+#peekEcg {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+}
+
+/* the hot session's cache countdown; "+$x.xx" right after a rescue */
+.plabel {
+  height: 13px;
+  margin: 1px 0 7px;
+  font-family: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  line-height: 13px;
+  color: #6B7280;
+  white-space: nowrap;
+  transition: color .3s, transform .3s;
+}
+
+.plabel.rescue {
+  color: #2E8B57;
+  font-weight: 700;
+  transform: scale(1.12);
+}
+
+#peekMascots {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* one session: its model's mark inside a ring that drains with its cache */
+.pring {
+  position: relative;
+  width: 38px;
+  height: 38px;
+}
+
+/* only the ring's own svg turns (so the arc starts at 12 o'clock) — the
+   mascot inside draws its own svg, which must stay upright */
+.pring>svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+
+.pring .rt {
+  fill: none;
+  stroke: #EEF0F2;
+  stroke-width: 2.4;
+}
+
+.pring .rf {
+  fill: none;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear, stroke .4s;
+}
+
+.pring .mascot {
+  position: absolute;
+  left: 7px;
+  top: 7px;
+  width: 24px;
+  height: 24px;
+}
+
+.pring .pdot {
+  position: absolute;
+  left: 15px;
+  top: 15px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #C3C8CF;
+}
+
+/* the dock sliver's dot: the state colour, flat */
+#dockDot {
+  width: 5px;
+  height: 5px;
+}
+/* "Sessions 2 cached" — how many sessions still have a live cache */
+.scount {
+  margin-left: 6px;
+  font-weight: 600;
+  color: #3FA46A;
+  font-size: 10.5px;
+}
+
+/* the tree's time column is the cache countdown now */
+.sitem .stime.cold {
+  color: #C3C8CF;
+}
+
+.tempty {
+  padding: 14px 6px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #9CA3AF;
+  text-align: center;
+}
+
+/* a cache-card row whose session isn't guarded: present, but quiet */
+.track.unguarded .ttitle,
+.track.unguarded .big {
+  color: #9CA3AF;
+}
+
+.track.unguarded .mascot {
+  opacity: .6;
+}
+
+/* the row whose session is selected (the guard button acts on it) */
+.track {
+  border-radius: 10px;
+}
+
+.track.sel {
+  background: #F3F4F6;
+}
+
+/* a long card scrolls instead of squeezing the session tree away */
+#tracks.multi {
+  max-height: 206px;                  /* three rows, then it scrolls */
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* the tree's time column, two faces: the last reply, and for a few
+   seconds out of every 14 the context size, rolling up like an odometer.
+   Both faces share one grid cell, so the slot is as wide as the wider. */
+.sitem .stime.flip {
+  display: inline-grid;
+  overflow: hidden;
+  height: 1.3em;
+  line-height: 1.3em;
+  text-align: right;
+}
+
+.sitem .stime.flip>span {
+  grid-area: 1 / 1;
+  animation: 14s linear infinite;
+  animation-delay: var(--fd, 0ms);
+}
+
+.sitem .stime.flip .fa {
+  animation-name: flipA;
+}
+
+.sitem .stime.flip .fb {
+  animation-name: flipB;
+  color: #6B7280;
+}
+
+.sitem .stime.flip .fb.warn {
+  color: #C98A1E;
+}
+
+.sitem .stime.flip .fb.hot {
+  color: #D14343;
+}
+
+/* ---- session names roll on a refresh -------------------------------------
+   The list is rebuilt on every poll, so an animation that simply started
+   at build time would restart every second. Like .stime.flip, each row
+   gets a negative delay off the wall clock (--rd), so the roll keeps its
+   place across rebuilds; JS drops the class once the roll is over and the
+   titles are plain (non-animated) text again. */
+.sitem .stitle.roll {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  vertical-align: bottom;
+}
+
+.sitem .stitle.roll>span {
+  display: inline-block;
+  animation: nameRoll 1.15s cubic-bezier(.4, 0, .2, 1) both;
+  animation-delay: var(--rd, 0ms);
+}
+
+/* up, gone for a beat (no glyphs at all), back up from below */
+@keyframes nameRoll {
+  0%   { transform: translateY(0);     opacity: 1; }
+  22%  { transform: translateY(-115%); opacity: 0; }
+  40%  { transform: translateY(-115%); opacity: 0; }
+  60%  { transform: translateY(115%);  opacity: 0; }
+  82%  { transform: translateY(0);     opacity: 1; }
+  100% { transform: translateY(0);     opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sitem .stitle.roll>span { animation-duration: .01s; }
+}
+
+/* ---- collapsible cache card ---------------------------------------------
+   No fold arrow: the head itself is the handle (hover tints it). Folded,
+   the rows go and each session becomes one circle — its model inside, a
+   ring draining with its cache, and its countdown when there is room.
+   Fewer sessions, bigger circles (--cs, set from the count in JS). */
+#cacheCard>.chead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6B7280;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 8px;
+  padding: 1px 2px;
+  margin: -2px -1px 3px;
+}
+
+#cacheCard>.chead:hover {
+  background: rgba(255, 255, 255, .75);
+}
+
+#cacheCard>.chead:focus-visible {
+  outline: 2px solid rgba(63, 164, 106, .45);
+  outline-offset: 1px;
+}
+
+#cacheCard>.chead .clab {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.csum {
+  font-weight: 600;
+  color: #3FA46A;
+}
+
+/* folded: the card itself goes — no panel, no label. What is left is a
+   row of separate floating circles, each with its own white face and
+   shadow (like the peek's), centred, a gap between each. An empty card
+   has nothing to turn into circles, so it stays a normal card. */
+#cacheCard.folded:not(.empty) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: 2px 0;
+}
+
+#cacheCard.folded #tracks,
+#cacheCard.folded:not(.empty) .cfoot {
+  display: none;
+}
+
+#cacheCard.folded>.chead {
+  margin: 0;
+  padding: 0;
+  justify-content: center;
+}
+
+#cacheCard.folded>.chead:hover {
+  background: transparent;
+}
+
+#cacheCard.folded>.chead .clab {
+  display: none;
+}
+
+/* no tracks: nothing to fold, so no head either — the card is just its
+   "no cache data yet" line, folded or not */
+#cacheCard.empty>.chead {
+  display: none;
+}
+
+#cacheCard.folded.empty .cfoot {
+  display: block;
+}
+
+/* the circles */
+.cfold {
+  display: none;
+}
+
+#cacheCard.folded .cfold {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  overflow: visible;   /* pill is absolutely positioned and can extend outside */
+}
+
+.cball {
+  --cs: 44px;
+  position: relative;
+  flex: 0 0 auto;
+  width: var(--cs);
+  height: var(--cs);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .92);
+  border: 1px solid rgba(255, 255, 255, .95);
+  box-shadow: 0 4px 12px rgba(16, 24, 40, .10),
+    0 1px 2px rgba(16, 24, 40, .06);
+  cursor: pointer;
+  transition: width .25s ease, height .25s ease, opacity .3s,
+    transform .18s ease, box-shadow .18s ease;
+}
+
+.cball:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(16, 24, 40, .14),
+    0 2px 4px rgba(16, 24, 40, .06);
+}
+
+.cball>svg {
+  position: absolute;
+  inset: 3px;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  transform: rotate(-90deg);
+}
+
+.cball .rt {
+  fill: none;
+  stroke: #EEF0F2;
+  stroke-width: 2.6;
+}
+
+.cball .rf {
+  fill: none;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear, stroke .4s;
+}
+
+/* the model, centred; nudged up when the countdown sits under it */
+.cball .mascot {
+  position: absolute;
+  left: 26%;
+  top: 26%;
+  width: 48%;
+  height: 48%;
+}
+
+.cball.roomy .mascot {
+  top: 17%;
+  left: 28%;
+  width: 44%;
+  height: 44%;
+}
+
+.cball .pdot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24%;
+  height: 24%;
+  margin: -12% 0 0 -12%;
+  border-radius: 50%;
+  background: #9CA3AF;
+}
+
+.cball .cleft {
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 19%;
+  text-align: center;
+  font: 600 8.5px/1 "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  color: #4B5563;
+  font-variant-numeric: tabular-nums;
+}
+
+.cball.roomy .cleft {
+  display: block;
+}
+
+.cball.cold {
+  opacity: .55;
+}
+
+.cball.cold .cleft {
+  color: #9CA3AF;
+}
+
+/* hover pill: shows on the hovered circle's open side, the others slide
+   away to give it room. Only enabled for ≤ 3 circles (.few on .cfold).
+   The pill is absolutely positioned; the row itself keeps its height. */
+.cfold.few {
+  position: relative;
+}
+
+/* every ball in a .few row is a slide target */
+.cfold.few .cball {
+  transition: transform .22s cubic-bezier(.34, 1.56, .64, 1),
+    width .25s ease, height .25s ease, opacity .3s,
+    box-shadow .18s ease;
+}
+
+/* the pill appears beside the hovered circle */
+.cpill {
+  position: absolute;
+  /* top/left/right set by JS; translateY(-50%) centres it on the circle */
+  transform: translateY(-50%) scaleX(0);
+  background: rgba(255, 255, 255, .96);
+  border: 1px solid rgba(220, 224, 230, .9);
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(16, 24, 40, .12);
+  padding: 7px 11px 8px;
+  min-width: 80px;
+  max-width: 180px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .16s, transform .22s cubic-bezier(.34, 1.56, .64, 1);
+  z-index: 20;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.cpill.right {
+  transform-origin: left center;
+}
+
+.cpill.left {
+  transform-origin: right center;
+}
+
+.cpill.show {
+  opacity: 1;
+  transform: translateY(-50%) scaleX(1);
+}
+
+.cpill .ptitle {
+  font: 600 11px/1.3 "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  color: #1F2328;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cpill .pmodel {
+  font-size: 10px;
+  color: #6B7280;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cpill .pprompt {
+  font-size: 10px;
+  color: #9CA3AF;
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cball { transition: opacity .3s; }
+  .cball:hover { transform: none; }
+  .cfold.few .cball { transition: opacity .3s; }
+  .cpill { transition: opacity .18s; }
+}
+
+
+/* time: shown, rolls up and out, comes back from below */
+@keyframes flipA {
+  0%, 70% { transform: translateY(0); }
+  74%, 94% { transform: translateY(-110%); }
+  94.01% { transform: translateY(110%); }
+  98%, 100% { transform: translateY(0); }
+}
+
+/* context size: waits below, rolls in, rolls up and away */
+@keyframes flipB {
+  0%, 70% { transform: translateY(110%); }
+  74%, 94% { transform: translateY(0); }
+  98%, 100% { transform: translateY(-110%); }
+}
+
+/* ------------------------------------------------ sessions | tokens */
+/* one card, two faces. Left: the drum — a window one line tall where the
+   face's title rolls (click = fold). Right: the way to the other face. */
+#sessHead {
+  gap: 6px;
+  margin: -3px -4px 4px;
+}
+
+.drum {
+  position: relative;
+  height: 22px;
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.drum:hover {
+  background: rgba(255, 255, 255, .8);
+}
+
+.drum:focus-visible {
+  outline: 2px solid rgba(63, 164, 106, .45);
+}
+
+.drumin {
+  display: flex;
+  flex-direction: column;
+  transition: transform .42s cubic-bezier(.3, 1.3, .5, 1);
+}
+
+#sessCard.v-tok .drumin {
+  transform: translateY(-22px);
+}
+
+.face {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.fico {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: #6B7280;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.face.ft .fico rect {
+  fill: #6B7280;
+  stroke: none;
+}
+
+.face .scount {
+  margin-left: 0;
+}
+
+.sside {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
+.sn {
+  font-weight: 500;
+  color: #9CA3AF;
+  font-size: 10.5px;
+}
+
+/* the mini chart: this week, 7 slim columns, today's a shade brighter */
+.spark {
+  border: 0;
+  box-shadow: none;
+  cursor: pointer;
+  height: 22px;
+  padding: 3px 6px;
+  border-radius: 8px;
+  background: transparent;
+  transition: background .15s, transform .15s;
+}
+
+.spark[hidden] {
+  display: none;
+}
+
+.spark:hover {
+  background: rgba(255, 255, 255, .85);
+  transform: translateY(-1px);
+}
+
+.spark:focus-visible,
+.tosess:focus-visible {
+  outline: 2px solid rgba(63, 164, 106, .45);
+}
+
+#sparkBars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+
+#sparkBars i {
+  display: block;
+  width: 3px;
+  border-radius: 1.5px;
+  background: color-mix(in srgb, var(--c) 55%, white);
+  transform-origin: bottom;
+  transition: height .3s;
+}
+
+#sparkBars i.now {
+  background: var(--c);
+}
+
+#sparkBars i.z {
+  background: #E5E7EB;
+}
+
+/* hovered, the columns lift one after another: "there's more here" */
+.spark:hover #sparkBars i {
+  animation: sparkhop .45s cubic-bezier(.3, 1.4, .5, 1) both;
+}
+
+.spark:hover #sparkBars i:nth-child(2) { animation-delay: 30ms; }
+.spark:hover #sparkBars i:nth-child(3) { animation-delay: 60ms; }
+.spark:hover #sparkBars i:nth-child(4) { animation-delay: 90ms; }
+.spark:hover #sparkBars i:nth-child(5) { animation-delay: 120ms; }
+.spark:hover #sparkBars i:nth-child(6) { animation-delay: 150ms; }
+.spark:hover #sparkBars i:nth-child(7) { animation-delay: 180ms; }
+
+@keyframes sparkhop {
+  0%, 100% { transform: none; }
+  45% { transform: scaleY(1.25); }
+}
+
+/* the sessions folder: a sheet per session sticks out of it (up to 3),
+   green while that session's cache is alive. Each sheet keeps its own
+   tilt (--r) and nudge (--x); hovered they rise and fan wider, a
+   refresh shuffles them. */
+.ffold {
+  display: inline-flex;
+  flex: none;
+}
+
+.fold3 {
+  width: 18px;
+  height: 18px;
+  overflow: visible;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fold3 .back {
+  stroke: #9CA3AF;
+  stroke-width: 1.3;
+}
+
+.fold3 .front {
+  fill: #fff;
+  stroke: #6B7280;
+  stroke-width: 1.4;
+}
+
+.fold3 .sh rect {
+  fill: #F7F8FA;
+  stroke: #B6BCC5;
+  stroke-width: 1;
+  transition: fill .3s, stroke .3s;
+}
+
+.fold3 .sh path {
+  stroke: #CDD2D8;
+  stroke-width: .9;
+  transition: stroke .3s;
+}
+
+.fold3 .sh.warm rect {
+  fill: #E6F5EC;
+  stroke: #3FA46A;
+}
+
+.fold3 .sh.warm path {
+  stroke: #8FD0A8;
+}
+
+.fold3 .sh {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  transform: translate(var(--x), 0) rotate(var(--r));
+  transition: transform .34s cubic-bezier(.3, 1.6, .5, 1);
+  transition-delay: calc(var(--i) * 40ms);
+}
+
+/* hovered: the sheets pop up out of the pocket and fan */
+.drum:hover .fold3 .sh,
+.tosess:hover .fold3 .sh {
+  transform: translate(calc(var(--x) * 1.5), -3px) rotate(calc(var(--r) * 1.6));
+}
+
+.fold3 .front {
+  transition: transform .3s cubic-bezier(.3, 1.6, .5, 1);
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.drum:hover .fold3 .front,
+.tosess:hover .fold3 .front {
+  transform: scaleY(.92);           /* the pocket gives a little */
+}
+
+/* ⟳ running: the sheets shuffle in and out of the folder */
+#sessCard.busy .fold3 .sh {
+  animation: shshuffle .6s cubic-bezier(.4, 0, .4, 1) calc(var(--i) * 90ms) infinite;
+}
+
+@keyframes shshuffle {
+  0%, 100% { transform: translate(var(--x), 0) rotate(var(--r)); }
+  40% { transform: translate(var(--x), -3.2px) rotate(calc(var(--r) * -.6)); }
+  70% { transform: translate(var(--x), 1.2px) rotate(var(--r)); }
+}
+
+/* back to sessions: the same folder, with the count on its corner */
+.tosess {
+  position: relative;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  cursor: pointer;
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  border-radius: 8px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.tosess:hover {
+  background: rgba(255, 255, 255, .85);
+}
+
+.tosess i {
+  position: absolute;
+  bottom: -1px;                    /* under the sheets, on the pocket */
+  right: -3px;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: #3FA46A;
+  color: #fff;
+  font-style: normal;
+  font-size: 8.5px;
+  font-weight: 700;
+  line-height: 13px;
+  text-align: center;
+  box-shadow: 0 0 0 1.5px #fff;
+}
+
+.tosess i:empty {
+  display: none;
+}
+
+/* which face: sessions = tree + mini chart + ⟳; tokens = chart +
+   period switch + folder stack */
+#sessCard .tkbody,
+#sessCard .tkseg {
+  display: none;
+}
+
+#sessCard.v-tok .tkbody,
+#sessCard.v-tok .tosess {
+  display: flex;
+}
+
+#sessCard.v-tok .tkseg {
+  display: block;
+}
+
+#sessCard.v-tok #tree,
+#sessCard.v-tok #lockNote,
+#sessCard.v-tok #btnRefresh,
+#sessCard.v-tok .spark {
+  display: none;
+}
+
+/* the roll between faces: the old one goes up and out, the new one
+   comes in from below (same move as the names' roll) */
+#sessCard.roll-out #tree,
+#sessCard.roll-out .tkbody {
+  animation: faceout .19s cubic-bezier(.4, 0, 1, 1) both;
+}
+
+#sessCard.roll-in #tree,
+#sessCard.roll-in .tkbody {
+  animation: facein .42s cubic-bezier(.2, .9, .3, 1.15) both;
+}
+
+@keyframes faceout {
+  to { opacity: 0; transform: translateY(-14px); }
+}
+
+@keyframes facein {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+#sessCard.folded {
+  flex: none;
+  padding-bottom: 7px;
+}
+
+#sessCard.folded #sessHead {
+  margin-bottom: -3px;
+}
+
+#sessCard.folded #tree,
+#sessCard.folded #lockNote,
+#sessCard.folded .tkbody {
+  display: none;
+}
+
+/* ------------------------------------------------ token usage */
+/* one colour per model (--c, from its family), the four token kinds are
+   that colour at four depths: cache read solid, cache write, input,
+   output the darkest — the same code in the bars and the legend */
+#sessCard {
+  position: relative;
+  overflow: hidden;              /* squeezed by a tall cache card: clip */
+  min-height: 42px;              /* …but never past its tab head */
+}
+
+#sessCard:has(.tktip:not([hidden])) {
+  overflow: visible;             /* …but let a tooltip out */
+}
+
+.tktotal {
+  font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1F2328;
+  font-variant-numeric: tabular-nums;
+}
+
+.tkusd {
+  font-weight: 500;
+  font-size: 10.5px;
+  color: #9CA3AF;
+  font-variant-numeric: tabular-nums;
+}
+
+/* the period dial (app.js tkWire): 1 · 7 · 30 (days) on a slim track,
+   and the knob is a little calendar page you hold and drag between
+   them. The page's top strip takes the busiest model's colour (--c).
+   More days, more pages: two sheets behind it fan out as it travels
+   right (--f, 0 at 1 day, 1 at 30). Position, stretch, fan and the
+   number on the page (flipped in, tkFlip) come from JS (--x, --sx, --sy, --f);
+   the numbers on the track fade out under it. */
+.tkseg {
+  position: relative;
+  flex: none;
+  width: 80px;
+  height: 22px;
+  border-radius: 11px;
+  background: #EEF0F3;
+  box-shadow: inset 0 1px 2px rgba(16, 24, 40, .06);
+  cursor: grab;
+  touch-action: none;
+  outline: none;
+}
+
+.tkseg.held {
+  cursor: grabbing;
+}
+
+.tkseg:focus-visible {
+  box-shadow: inset 0 1px 2px rgba(16, 24, 40, .06), 0 0 0 2px rgba(63, 164, 106, .45);
+}
+
+.tkstop {
+  position: absolute;
+  top: 0;
+  width: 20px;
+  margin-left: -10px;
+  font: 600 10px/22px "Segoe UI", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: #A3AAB5;
+  pointer-events: none;
+}
+
+.tkstop:nth-of-type(1) { left: 12px; }
+.tkstop:nth-of-type(2) { left: 40px; }
+.tkstop:nth-of-type(3) { left: 68px; }
+
+/* the calendar: two sheets behind, the page in front */
+.tkknob {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 24px;
+  height: 18px;
+  margin-left: -12px;
+  transform: translateX(var(--x, 40px));
+  pointer-events: none;
+}
+
+.tkknob s,
+.tkpage {
+  position: absolute;
+  inset: 0;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.tkknob s {
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .14);
+  transform-origin: 50% 100%;
+  /* each sheet keeps a paler strip of the page's colour, so the fan reads */
+  background-image: linear-gradient(color-mix(in srgb, var(--c, #3FA46A) 45%, #fff) 0 4.5px, transparent 4.5px);
+}
+
+/* the sheets behind fan out with --f: the far one tilts left, the near
+   one right; at one day they sit flush, unseen */
+.tkknob s:nth-child(1) {
+  background-color: #F1F2F4;
+  transform: rotate(calc(var(--f, .5) * -16deg)) translate(calc(var(--f, .5) * -3.5px), calc(var(--f, .5) * -1px));
+}
+
+.tkknob s:nth-child(2) {
+  background-color: #F8F9FA;
+  transform: rotate(calc(var(--f, .5) * 9deg)) translate(calc(var(--f, .5) * 3px), calc(var(--f, .5) * -.5px));
+}
+
+/* the page: stretches with speed (its body only; the number would smear) */
+.tkpage {
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, .16), 0 0 0 .5px rgba(16, 24, 40, .05);
+  transform: scale(var(--sx, 1), var(--sy, 1));
+  transition: box-shadow .2s;
+}
+
+.tkseg.held .tkpage {
+  box-shadow: 0 3px 8px rgba(16, 24, 40, .18), 0 0 0 .5px rgba(16, 24, 40, .06);
+}
+
+/* the binding strip across the top, two ring holes in it */
+.tkpage::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 4.5px;
+  background: var(--c, #3FA46A);
+  transition: background .5s;
+}
+
+.tkpage::after {
+  content: "";
+  position: absolute;
+  top: 1.5px;
+  left: 6px;
+  right: 6px;
+  height: 1.5px;
+  background: radial-gradient(circle, rgba(255, 255, 255, .9) 0 .75px, transparent 1px) 0 0 / 50% 100% repeat-x;
+}
+
+/* the number window under the strip. A new number arrives as a page
+   flip (app.js tkFlip): more days, the page on top lifts up off the
+   binding and away; fewer, a page comes down over it. */
+.tkwin {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 4.5px;
+  bottom: 0;
+  overflow: hidden;
+}
+
+.tkday,
+.tkflap b {
+  position: absolute;
+  inset: 0;                          /* exactly the page, whatever the number */
+  font: 800 10px/13.5px "Segoe UI", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: #1F2328;
+}
+
+.tkflap {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  transform-origin: 50% 0;           /* hinged on the binding */
+  backface-visibility: hidden;
+  box-shadow: 0 1px 1px rgba(16, 24, 40, .1);
+}
+
+.tkbody {
+  flex: 1 1 0;                   /* height = the slot, never its content */
+  min-height: 0;
+  flex-direction: column;
+  margin-top: 4px;
+}
+
+/* short slot, the rows win (fitTok in app.js measures it). Not a CSS
+   container query: in WebView2 every relayout re-evaluates one and
+   restarts the grow-in animations under it — once a second, with the
+   countdown. Not much room: a flatter chart, no legend (the row tooltip
+   names the four kinds anyway); very little: rows only. */
+#sessCard.tk-flat .tkchart { height: 24px; }
+/* a detail open: the chart steps back a little to give it the room */
+#sessCard.tk-detail .tkchart { height: 18px; }
+.tkchart { transition: height .3s cubic-bezier(.2, .8, .2, 1); }
+#sessCard.tk-nolegend .tklegend,
+#sessCard.tk-detail .tklegend { display: none; }
+#sessCard.tk-rowsonly .tkchart,
+#sessCard.tk-rowsonly .tkaxis { display: none; }
+#sessCard.tk-none .tkrows { display: none; }
+
+/* columns: one per hour/day, stacked by model, height = its share of
+   the busiest column */
+.tkchart {
+  flex: none;
+  height: 38px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.tkcol {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column-reverse;    /* biggest model at the bottom */
+  border-radius: 2px;
+  position: relative;
+}
+
+.tkcol::before {                     /* the baseline tick of an empty slot */
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: #EEF0F3;
+}
+
+.tkcol i {
+  display: block;
+  flex: none;
+  background: var(--c);
+  position: relative;               /* above the baseline tick */
+  transform-origin: bottom;
+  animation: tkgrow .5s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.tkcol i:last-child {
+  border-radius: 2px 2px 0 0;
+}
+
+.tkcol.future::before {
+  background: transparent;
+  border-bottom: 1px dashed #E5E7EB;
+}
+
+.tkcol:hover i {
+  filter: brightness(1.08) saturate(1.1);
+}
+
+/* the night (empty off-hours, merged): a slim spacer, not a column */
+.tkcol.gap {
+  flex: 0 0 8px;
+}
+
+.tkcol.gap::before {
+  height: 0;
+  border-bottom: 1px dashed #DDE1E6;
+  background: transparent;
+}
+
+/* today's ticks: placed under their own column (the bins aren't even) */
+.tkaxis.abs {
+  position: relative;
+  height: 11px;
+}
+
+.tkaxis.abs span {
+  position: absolute;
+  top: 0;
+}
+
+.tkcol.now::before {
+  background: #D1D5DB;
+}
+
+@keyframes tkgrow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+.tkaxis {
+  flex: none;
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #B0B6BF;
+  margin: 2px 0 5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tkrows {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.tkrows::-webkit-scrollbar {
+  width: 4px;
+}
+
+.tkrows::-webkit-scrollbar-thumb {
+  background: #E5E7EB;
+  border-radius: 2px;
+}
+
+.tkrow {
+  display: grid;
+  grid-template-columns: 8px 76px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 4px;
+  border-radius: 7px;
+  font-size: 11px;
+}
+
+.tkrow:hover {
+  background: rgba(255, 255, 255, .8);
+}
+
+.tkdot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c);
+}
+
+.tkname {
+  color: #374151;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* the model's tokens split by kind; width = its share of the top model */
+.tkbar {
+  height: 7px;
+  border-radius: 4px;
+  background: #F1F2F4;
+  overflow: hidden;
+}
+
+.tkbar>span {
+  display: flex;
+  height: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+  transform-origin: left;
+  animation: tkslide .55s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.tkbar>span>i {
+  display: block;
+  height: 100%;
+}
+
+@keyframes tkslide {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.k-cr { background: var(--c); }
+.k-cw { background: color-mix(in srgb, var(--c) 58%, white); }
+.k-in { background: color-mix(in srgb, var(--c) 30%, white); }
+.k-out { background: color-mix(in srgb, var(--c) 70%, #1F2328); }
+
+.tknum {
+  min-width: 46px;
+  text-align: right;
+  color: #1F2328;
+  font-weight: 600;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tknum small {
+  display: block;
+  margin-top: -2px;
+  font-size: 8.5px;
+  font-weight: 500;
+  color: #9CA3AF;
+}
+
+.tkempty {
+  padding: 6px 4px 2px;
+  font-size: 11px;
+  color: #9CA3AF;
+  text-align: center;
+}
+
+.tklegend {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 9.5px;
+  color: #9CA3AF;
+  --c: #6B7280;                      /* neutral swatches */
+}
+
+.tklegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.tklegend i {
+  width: 8px;
+  height: 6px;
+  border-radius: 2px;
+}
+
+.tklegend b {
+  font-weight: 500;
+}
+
+.tktip {
+  min-width: 150px;
+}
+
+.tktip .tl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.tktip .tl em {
+  font-style: normal;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tktip .tl em i {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+}
+
+.tktip .tl em i:not([class]) {
+  background: var(--c);
+}
+
+.tktip .tl span {
+  font-variant-numeric: tabular-nums;
+}
+
+.tktip .hd {
+  color: #111827;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.tktip .tl span {
+  color: #1F2328;
+  font-weight: 600;
+}
+
+.tktip .ft {
+  margin-top: 3px;
+  padding-top: 3px;
+  border-top: 1px solid #F1F2F4;
+  color: #6B7280;
+}
+
+/* a model's detail: unfolds under its row (grid 0fr -> 1fr animates the
+   real height), so the rows below slide down to make room */
+.tkrow {
+  cursor: pointer;
+}
+
+.tkrow:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.tkrow:focus-visible {
+  outline: 2px solid rgba(63, 164, 106, .45);
+  outline-offset: -2px;
+}
+
+.tkrow.open {
+  background: rgba(255, 255, 255, .9);
+}
+
+.tkrow.open .tkname {
+  color: #111827;
+}
+
+/* the open row's dot gets a halo — the bubble's pointer aims at it */
+.tkdot {
+  transition: box-shadow .25s;
+}
+
+.tkrow.open .tkdot {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 22%, transparent);
+}
+
+/* the detail bubble: grows the row's room (grid 0fr -> 1fr) while a
+   white card springs up out of the row's dot — a little pointer still
+   aims at it — then the ring draws and the numbers run up */
+.tkdet {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .34s cubic-bezier(.3, 1.25, .5, 1);
+}
+
+.tkdet.open {
+  grid-template-rows: 1fr;
+}
+
+.tkdet.shut {
+  transition-duration: .24s;
+  transition-timing-function: cubic-bezier(.4, 0, .6, 1);
+}
+
+.tkdet.still {
+  transition: none;
+}
+
+.tkdin {
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 4px 5px;              /* room for the card's shadow */
+}
+
+.tkdbox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 7px 0 0;
+  padding: 7px 11px 7px 9px;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(16, 24, 40, .08), 0 1px 3px rgba(16, 24, 40, .06),
+    inset 0 0 0 1px rgba(16, 24, 40, .05);
+  transform-origin: 12px 0;        /* springs out of the row's dot */
+}
+
+.tkdbox::before {                  /* the pointer up at the dot */
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 10px;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px 0 0 0;
+  background: #fff;
+  box-shadow: -1px -1px 0 0 rgba(16, 24, 40, .05);
+  transform: rotate(45deg);
+}
+
+.tkdet.pop .tkdbox {
+  animation: tkpop .5s cubic-bezier(.3, 1.4, .5, 1) both;
+}
+
+.tkdet.shut .tkdbox {
+  animation: tkshut .22s cubic-bezier(.4, 0, 1, 1) both;
+}
+
+@keyframes tkpop {
+  0% { opacity: 0; transform: translateY(-6px) scale(.55); }
+  55% { opacity: 1; }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes tkshut {
+  to { opacity: 0; transform: translateY(-4px) scale(.7); }
+}
+
+/* the ring: four arcs, drawn one after another */
+.tkring {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 46px;
+}
+
+.tkring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.tkring circle {
+  fill: none;
+  stroke-width: 4.4;
+  stroke-linecap: round;
+  stroke-dasharray: var(--len) 100;
+  stroke-dashoffset: var(--at);
+}
+
+.tkring circle.trk {
+  stroke: color-mix(in srgb, var(--c) 8%, #F1F2F4);
+  stroke-dasharray: none;
+  stroke-linecap: butt;
+}
+
+.tkring .k-cr { stroke: var(--c); }
+.tkring .k-cw { stroke: color-mix(in srgb, var(--c) 58%, white); }
+.tkring .k-in { stroke: color-mix(in srgb, var(--c) 30%, white); }
+.tkring .k-out { stroke: color-mix(in srgb, var(--c) 70%, #1F2328); }
+
+.tkdet.pop .tkring circle:not(.trk) {
+  animation: tkarc .55s cubic-bezier(.2, .8, .2, 1) var(--d) both;
+}
+
+@keyframes tkarc {
+  from { stroke-dasharray: 0 100; }
+  to { stroke-dasharray: var(--len) 100; }
+}
+
+.tkhit {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.tkhit b {
+  font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1F2328;
+  font-variant-numeric: tabular-nums;
+}
+
+.tkhit small {
+  font-size: 8px;
+  font-weight: 600;
+  margin-left: 1px;
+  color: #6B7280;
+}
+
+.tkhit span {
+  margin-top: 2px;
+  font-size: 8px;
+  color: #9CA3AF;
+}
+
+.tkdr {
+  flex: 1;
+  min-width: 0;
+}
+
+.tkdg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px 12px;
+}
+
+.tkdc {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  color: #6B7280;
+  min-width: 0;
+}
+
+.tkdet.pop .tkdc {
+  animation: tkrise .4s cubic-bezier(.2, .8, .2, 1) var(--d) both;
+}
+
+@keyframes tkrise {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.tkdc i {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.tkdc span {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tkdc b {
+  color: #1F2328;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* requests / price: two soft chips */
+.tkdf {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.tkdf em {
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 500;
+  color: #4B5563;
+  background: #F3F4F6;
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tkdet.pop .tkdf {
+  animation: tkrise .4s cubic-bezier(.2, .8, .2, 1) .3s both;
+}
+
+/* a detail open: the chart keeps that model, the others fade back */
+.tkchart.focus i {
+  opacity: .22;
+  transition: opacity .2s;
+}
+
+.tkchart.focus i.hi {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tkcol i, .tkbar>span { animation: none; }
+  .tkdet { transition: none; }
+  .drumin { transition: none; }
+  #sessCard.roll-in #tree, #sessCard.roll-in .tkbody,
+  #sessCard.roll-out #tree, #sessCard.roll-out .tkbody,
+  .spark:hover #sparkBars i, #sessCard.busy .fold3 .sh { animation: none; }
+  .fold3 .sh, .fold3 .front { transition: none; }
+  .tkdet .tkdbox, .tkdet .tkring circle, .tkdet .tkdc, .tkdet .tkdf { animation: none !important; }
+}
+
+/* ------------------------------------------------ control feedback */
+/* the buttons keep their plain look; a press sends a soft grey ripple
+   out from the finger, and the panel answers where the action lands */
+.pressfx {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(16, 24, 40, .14) 0%, rgba(16, 24, 40, .06) 45%, transparent 70%);
+}
+
+#guardLabel {
+  display: inline-block;
+}
+
+/* Start guard: a small heart lifts off the button, passes the session
+   it now guards and lands on the header's heartbeat as one beat */
+.fxheart {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 50;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 3px rgba(16, 24, 40, .18));
+}
+
+.fxheart svg {
+  width: 100%;
+  height: 100%;
+  fill: #3FA46A;
+}
+
+/* the beat landing: a faint ring opens round the heartbeat */
+#head::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  margin-top: -22px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+}
+
+#head.fxbeat::after {
+  animation: fxring .65s cubic-bezier(.2, .8, .2, 1);
+}
+
+#head.fxbeat .ecg {
+  animation: fxthump .45s cubic-bezier(.3, 1.6, .5, 1);
+}
+
+@keyframes fxring {
+  0% { opacity: .8; box-shadow: 0 0 0 0 rgba(63, 164, 106, .35); }
+  100% { opacity: 0; box-shadow: 0 0 0 14px rgba(63, 164, 106, 0); }
+}
+
+@keyframes fxthump {
+  0%, 100% { transform: scale(1); }
+  35% { transform: scale(1.1); }
+}
+
+/* the session just guarded: a light wash through its row, the ♥ pops
+   in (--gd = its place on the wall clock across rebuilds) */
+.sitem.fxflash {
+  animation: fxwash 1.4s ease-out var(--gd, 0ms) both;
+}
+
+.sitem.fxflash .gheart {
+  animation: fxpop .5s cubic-bezier(.3, 1.8, .5, 1) calc(var(--gd, 0ms) + 380ms) both;
+}
+
+@keyframes fxwash {
+  0% { background: rgba(255, 255, 255, 0); }
+  25% { background: #F1F8F4; }
+  100% { background: rgba(255, 255, 255, 0); }
+}
+
+@keyframes fxpop {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+/* Stop: the ♥ comes loose and drops out of its row */
+.fxdrop {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+  font-style: normal;
+  font-size: 9px;
+  color: #3FA46A;
+}
+
+/* Renew now: a light runs along each cache bar, and round each circle
+   when the card is folded */
+#cacheCard.fxrenew .cbar {
+  position: relative;
+}
+
+#cacheCard.fxrenew .cbar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .95), transparent);
+  width: 40%;
+  animation: fxsweep .8s cubic-bezier(.4, 0, .2, 1);
+}
+
+#cacheCard.fxrenew .track:nth-child(2) .cbar::after { animation-delay: 70ms; }
+#cacheCard.fxrenew .track:nth-child(3) .cbar::after { animation-delay: 140ms; }
+
+@keyframes fxsweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(260%); }
+}
+
+#cacheCard.fxrenew .cball {
+  animation: fxballpulse .7s cubic-bezier(.3, 1.4, .5, 1);
+}
+
+#cacheCard.fxrenew .cball:nth-child(2) { animation-delay: 70ms; }
+#cacheCard.fxrenew .cball:nth-child(3) { animation-delay: 140ms; }
+
+@keyframes fxballpulse {
+  0%, 100% { box-shadow: 0 4px 12px rgba(16, 24, 40, .10),
+    0 1px 2px rgba(16, 24, 40, .06); }
+  40% { box-shadow: 0 0 0 4px rgba(63, 164, 106, .18), 0 4px 12px rgba(16, 24, 40, .10),
+    0 1px 2px rgba(16, 24, 40, .06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fxheart, .fxdrop { display: none; }
+  #cacheCard.fxrenew .cbar::after, #cacheCard.fxrenew .cball,
+  #head.fxbeat::after, #head.fxbeat .ecg, .sitem.fxflash,
+  .sitem.fxflash .gheart { animation: none; }
+  .pressfx { display: none; }
+  .ivthumb { transition: none; }
+}

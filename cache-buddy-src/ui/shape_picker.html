@@ -1,0 +1,271 @@
+<!doctype html>
+<!-- Dock / peek shape picker: five shapes for the edge views, each drawn
+     as its dock sliver and its peek card over a fake desktop. Static —
+     the real ECG / rings come from app.js once a shape is picked.
+     python -m http.server 8765 in ui/  ->  /shape_picker.html -->
+<html lang="zh">
+
+<head>
+  <meta charset="utf-8">
+  <title>Cache Buddy — 半隐藏态形态选择</title>
+  <style>
+    :root {
+      --g: #3FA46A;
+      --glass: rgba(255, 255, 255, .78);
+      --mono: "Cascadia Mono", Consolas, monospace;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", sans-serif;
+      color: #1F2328;
+      background: #EEF0F3;
+    }
+
+    header {
+      padding: 22px 28px 6px;
+    }
+
+    header h1 {
+      margin: 0 0 4px;
+      font-size: 18px;
+    }
+
+    header p {
+      margin: 0;
+      font-size: 12.5px;
+      color: #6B7280;
+    }
+
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      padding: 18px 28px 30px;
+    }
+
+    .opt {
+      width: 250px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 22px rgba(16, 24, 40, .07);
+      overflow: hidden;
+    }
+
+    .opt h2 {
+      margin: 12px 14px 2px;
+      font-size: 14px;
+    }
+
+    .opt .sub {
+      margin: 0 14px 10px;
+      font-size: 11.5px;
+      color: #6B7280;
+      min-height: 32px;
+    }
+
+    .opt .feas {
+      margin: 0 14px 12px;
+      font-size: 11px;
+      color: #9CA3AF;
+    }
+
+    .opt .feas b {
+      color: #3FA46A;
+    }
+
+    .opt .feas b.mid {
+      color: #E0A042;
+    }
+
+    /* fake desktop: the right screen edge is the right side of .desk */
+    .desk {
+      position: relative;
+      height: 330px;
+      background:
+        radial-gradient(60% 50% at 20% 30%, #9EC5FE 0, transparent 70%),
+        radial-gradient(50% 45% at 70% 80%, #F9C6D6 0, transparent 70%),
+        linear-gradient(135deg, #DCE6F5, #EADCF0);
+      overflow: hidden;
+    }
+
+    .desk .label {
+      position: absolute;
+      left: 10px;
+      font-size: 10px;
+      color: rgba(31, 35, 40, .55);
+      font-family: var(--mono);
+    }
+
+    .desk .l1 { top: 8px; }
+    .desk .l2 { top: 100px; }
+
+    /* shared contents of a peek card */
+    .ecg {
+      width: 30px;
+      height: 20px;
+      flex: 0 0 auto;
+    }
+
+    .ecg path {
+      fill: none;
+      stroke: var(--g);
+      stroke-width: 1.8;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+    }
+
+    .cd {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: #6B7280;
+      margin: 1px 0 4px;
+    }
+
+    .ring {
+      width: 30px;
+      height: 30px;
+      position: relative;
+    }
+
+    .ring svg {
+      position: absolute;
+      inset: 0;
+      transform: rotate(-90deg);
+    }
+
+    .ring .t { fill: none; stroke: #E5E7EB; stroke-width: 2.4; }
+    .ring .f { fill: none; stroke: var(--g); stroke-width: 2.4; stroke-linecap: round; }
+
+    .ring i {
+      position: absolute;
+      left: 9px;
+      top: 9px;
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      background: #D97757;
+    }
+
+    .ring i.gpt { background: #1F1F1F; border-radius: 50%; }
+
+    .card {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: var(--glass);
+      backdrop-filter: blur(16px);
+    }
+
+    .stack { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+
+    /* ---- A: today's, without the outline: square on the edge side */
+    .A .dock { position: absolute; right: 0; top: 30px; width: 8px; height: 46px;
+      background: var(--glass); border-radius: 8px 0 0 8px;
+      display: flex; align-items: center; justify-content: center; }
+    .A .card { right: 0; top: 118px; width: 50px; padding: 8px 0 10px;
+      border-radius: 13px 0 0 13px; }
+
+    /* ---- B: half-pill tab — flat on the screen edge, a full round end in */
+    .B .dock { position: absolute; right: 0; top: 30px; width: 9px; height: 46px;
+      background: var(--glass); border-radius: 23px 0 0 23px;
+      display: flex; align-items: center; justify-content: center; }
+    .B .card { right: 0; top: 118px; width: 50px; padding: 10px 0 12px;
+      border-radius: 25px 0 0 25px; }
+
+    /* ---- C: capsule — both ends round, floats a few px off the edge */
+    .C .dock { position: absolute; right: 4px; top: 30px; width: 8px; height: 44px;
+      background: var(--glass); border-radius: 99px;
+      display: flex; align-items: center; justify-content: center; }
+    .C .card { right: 6px; top: 118px; width: 46px; padding: 12px 0 14px;
+      border-radius: 99px; }
+
+    /* ---- D: soft blob — one big inner curve, like a drop on the edge */
+    .D .dock { position: absolute; right: 0; top: 28px; width: 10px; height: 50px;
+      background: var(--glass); border-radius: 50% 0 0 50% / 30% 0 0 30%;
+      display: flex; align-items: center; justify-content: center; }
+    .D .card { right: 0; top: 116px; width: 52px; padding: 12px 0 14px;
+      border-radius: 60% 0 0 60% / 22% 0 0 22%; }
+
+    /* ---- E: bubbles — no card at all; ECG and each session float alone */
+    .E .dock { position: absolute; right: 4px; top: 34px; width: 14px; height: 14px;
+      background: var(--glass); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; }
+    .E .bubbles { position: absolute; right: 6px; top: 116px;
+      display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .E .bub { width: 40px; height: 40px; border-radius: 50%;
+      background: var(--glass); backdrop-filter: blur(16px);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .E .bub .ecg { width: 26px; height: 16px; }
+    .E .bub .cd { margin: 0; font-size: 8px; }
+
+    .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--g);
+      box-shadow: 0 0 6px var(--g); }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>半隐藏态 / 隐藏态 · 形态选择</h1>
+    <p>每张卡片上半是隐藏态（贴边的小条），下半是半隐藏态（鼠标移上去弹出的卡片）。右边缘 = 屏幕边缘。全部不带描边。<br>
+      注意：除 A 以外的形状都要用 Windows 窗口裁剪来做，裁剪后的边缘没有抗锯齿（1.5 倍缩放下不太明显），窗口自带的阴影也会消失。</p>
+  </header>
+  <div class="grid" id="grid"></div>
+
+  <script>
+    const ECG = '<svg class="ecg" viewBox="0 0 30 20"><path d="M1 13 H10 L12 15 L15 3 L18 17 L20 13 H29"/></svg>';
+    const ring = (frac, cls) => {
+      const C = 2 * Math.PI * 13;
+      return '<div class="ring"><svg viewBox="0 0 30 30">' +
+        '<circle class="t" cx="15" cy="15" r="13"/>' +
+        '<circle class="f" cx="15" cy="15" r="13" stroke-dasharray="' +
+        C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - frac)).toFixed(1) +
+        '"/></svg><i class="' + (cls || "") + '"></i></div>';
+    };
+    const inner = ECG + '<div class="cd">4:25</div><div class="stack">' +
+      ring(.88) + ring(.32) + ring(0, "gpt") + "</div>";
+
+    const OPTS = [
+      { k: "A", t: "A · 现在的形状（去掉描边）",
+        s: "贴边一侧是直角，外侧圆角。只是把描边去掉。",
+        f: '<b>最好做</b>：窗口原生圆角，无锯齿，阴影保留' },
+      { k: "B", t: "B · 半胶囊（推荐）",
+        s: "贴屏幕那边是平的，朝外那头是整个半圆，像从边上拉出来的标签。",
+        f: '<b>好做</b>：圆角矩形 + 矩形拼出来，轻微锯齿' },
+      { k: "C", t: "C · 胶囊（推荐）",
+        s: "两头都是半圆，离屏幕边缘几像素悬浮着，最轻盈。",
+        f: '<b>好做</b>：一个圆角矩形区域，轻微锯齿' },
+      { k: "D", t: "D · 水滴",
+        s: "贴边，朝外是一道很大的弧线，像一滴挂在屏幕边上的水。",
+        f: '<b class="mid">较难</b>：要用多边形近似曲线，锯齿明显些' },
+      { k: "E", t: "E · 气泡",
+        s: "没有卡片：ECG 和每个会话各自是一个独立的圆，竖着排。",
+        f: '<b class="mid">可做但复杂</b>：多个圆形区域拼接，会话数一变就要重算' },
+    ];
+
+    const grid = document.getElementById("grid");
+    for (const o of OPTS) {
+      const peek = o.k === "E"
+        ? '<div class="bubbles"><div class="bub">' + ECG +
+          '<div class="cd">4:25</div></div>' +
+          '<div class="bub">' + ring(.88) + '</div>' +
+          '<div class="bub">' + ring(.32) + '</div>' +
+          '<div class="bub">' + ring(0, "gpt") + '</div></div>'
+        : '<div class="card">' + inner + '</div>';
+      const el = document.createElement("div");
+      el.className = "opt " + o.k;
+      el.innerHTML = '<h2></h2><p class="sub"></p>' +
+        '<div class="desk"><span class="label l1">隐藏态</span>' +
+        '<div class="dock"><span class="dot"></span></div>' +
+        '<span class="label l2">半隐藏态</span>' + peek + '</div>' +
+        '<p class="feas"></p>';
+      el.querySelector("h2").textContent = o.t;
+      el.querySelector(".sub").textContent = o.s;
+      el.querySelector(".feas").innerHTML = o.f;
+      grid.appendChild(el);
+    }
+  </script>
+</body>
+
+</html>
