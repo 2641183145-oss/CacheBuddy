@@ -121,11 +121,15 @@ class Tracker(threading.Thread):
 
     def __init__(self, which, cc_dir=None, devin_db=None, droid_dir=None,
                  droid_file=None, cc_cost=None, cost=None, family=None,
-                 every=EVERY):
+                 droid_org=None, every=EVERY):
         super().__init__(daemon=True, name="usage")
         self.which = tuple(which)
         self.cc_dir, self.devin_db = cc_dir, devin_db
         self.droid_dir, self.droid_file = droid_dir, droid_file
+        self.droid_org = droid_org  # () -> signed-in org; droid rows are
+        self._lock = threading.RLock()  # per account, so state() can
+        self._dr_org = None         # re-summarize on a switch
+        self._dr_acct = None
         self.cc_cost = cc_cost    # (model, usage dict) -> (usd, _) or None
         self.cost = cost          # (metrics dict) -> (usd, _) or None
         self.family = family or (lambda m: "generic")
@@ -265,6 +269,9 @@ class Tracker(threading.Thread):
 
     # ---------------------------------------------------------- Droid
     def _droid_load(self):
+        """Ledger v2: seen keeps each session's org, hours nest by org
+        ("" = no organizationId in the transcript). A v1 file can't be
+        attributed — start over and re-book every session at sight."""
         d = None
         if self.droid_file:
             try:
@@ -272,24 +279,29 @@ class Tracker(threading.Thread):
                     d = json.load(f)
             except (OSError, ValueError):
                 d = None
-        if not isinstance(d, dict):
+        if not isinstance(d, dict) or d.get("v") != 2:
+            if isinstance(d, dict) and d.get("seen"):
+                log("usage: droid ledger v1 -> v2: sessions re-book under"
+                    " their account")
             d = {}
-        return {"seen": d.get("seen") or {}, "hours": d.get("hours") or {}}
+        return {"v": 2, "seen": d.get("seen") or {},
+                "hours": d.get("hours") or {}}
 
     def _droid_save(self):
         if not self.droid_file:
             return
-        cut = _hour(time.time() - KEEP_DAYS * 86400)
-        self._dr["hours"] = {h: v for h, v in self._dr["hours"].items()
-                             if h >= cut}
-        tmp = self.droid_file + ".tmp"
-        try:
-            os.makedirs(os.path.dirname(self.droid_file), exist_ok=True)
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(self._dr, f)
-            os.replace(tmp, self.droid_file)
-        except OSError as e:
-            log("usage: droid save: %s" % e)
+        with self._lock:
+            cut = _hour(time.time() - KEEP_DAYS * 86400)
+            self._dr["hours"] = {h: v for h, v in self._dr["hours"].items()
+                                 if h >= cut}
+            tmp = self.droid_file + ".tmp"
+            try:
+                os.makedirs(os.path.dirname(self.droid_file), exist_ok=True)
+                with open(tmp, "w", encoding="utf-8") as f:
+                    json.dump(self._dr, f)
+                os.replace(tmp, self.droid_file)
+            except OSError as e:
+                log("usage: droid save: %s" % e)
 
     def scan_droid(self, parse=None):
         """parse(path) -> droid_buddy._Parse (newest reply model/time and
@@ -335,7 +347,8 @@ class Tracker(threading.Thread):
                 prev = (old or {}).get("tok") or [0, 0, 0, 0]
                 delta = [max(0, a - b) for a, b in zip(cur, prev)]
                 turns = max(0, replies - (old or {}).get("n", 0))
-                seen[sid] = {"tok": cur, "n": replies}
+                org = getattr(p, "org", None) or ""
+                seen[sid] = {"tok": cur, "n": replies, "org": org}
                 changed = True
                 if not any(delta):
                     continue
@@ -346,21 +359,24 @@ class Tracker(threading.Thread):
                     ts = p.reply_ts or p.answer_ts or ts
                 model = (getattr(p, "model", None) or st.get("model")
                          or "")
-                self._droid_book(_hour(ts), model, delta, turns)
+                self._droid_book(_hour(ts), model, delta, turns, org)
         if changed:
             self._droid_save()
 
-    def _droid_book(self, hour, model, v, turns):
-        hrs = self._dr["hours"].setdefault(hour, {})
-        k = canon(model)
-        row = hrs.setdefault(k, {"tok": [0, 0, 0, 0], "n": 0, "usd": 0.0})
-        row["tok"] = [a + b for a, b in zip(row["tok"], v)]
-        row["n"] += turns
-        usd = self._usd(model, v)
-        if usd is None or row["usd"] is None:
-            row["usd"] = None                   # no list price for it
-        else:
-            row["usd"] += usd
+    def _droid_book(self, hour, model, v, turns, org=""):
+        with self._lock:
+            hrs = self._dr["hours"].setdefault(hour, {}) \
+                .setdefault(org or "", {})
+            k = canon(model)
+            row = hrs.setdefault(k, {"tok": [0, 0, 0, 0], "n": 0,
+                                     "usd": 0.0})
+            row["tok"] = [a + b for a, b in zip(row["tok"], v)]
+            row["n"] += turns
+            usd = self._usd(model, v)
+            if usd is None or row["usd"] is None:
+                row["usd"] = None               # no list price for it
+            else:
+                row["usd"] += usd
 
     # -------------------------------------------------------- summary
     def _rows(self, harness):
@@ -372,11 +388,50 @@ class Tracker(threading.Thread):
             for h, m, v, usd in list(self._dv.values()):
                 yield h, m, v, 1, usd
         elif harness == "droid":
-            for h, ms in list(self._dr["hours"].items()):
-                for m, r in ms.items():
-                    yield h, m, r["tok"], r.get("n", 0), r.get("usd")
+            cur = self.droid_org() if self.droid_org else None
+            for h, orgs in list(self._dr["hours"].items()):
+                for o, ms in orgs.items():
+                    # the signed-in account's rows plus the account-less
+                    # ones (visible()s rule); no account known: all of it
+                    if cur and o and o != cur:
+                        continue
+                    for m, r in ms.items():
+                        yield h, m, r["tok"], r.get("n", 0), r.get("usd")
+
+    def _droid_account(self):
+        """{"org", "name"} for the summary's header chip — the letter is
+        the one Buddy gave the org (droid-accounts.json, read raw here:
+        cheap, and no session scan from state())."""
+        org = self._dr_org
+        if not org or not self.droid_file:
+            return None
+        names = os.path.join(os.path.dirname(self.droid_file),
+                             "droid-accounts.json")
+        try:
+            with open(names, encoding="utf-8") as f:
+                letter = (json.load(f) or {}).get(org)
+        except (OSError, ValueError):
+            letter = None
+        a = {"org": org}
+        if letter:
+            a["name"] = letter
+        return a
 
     def summarize(self, harness, now=None):
+        """{day, week, month}: each {keys, total, usd, partial, rows}.
+        Droid's also says which org it counts (`account`) and reads the
+        ledger under the lock — state() may call it off the scan thread."""
+        if harness == "droid":
+            with self._lock:
+                self._dr_org = self.droid_org() if self.droid_org else None
+                out = self._summarize(harness, now)
+                a = self._droid_account()
+                if a:
+                    out["account"] = a
+                return out
+        return self._summarize(harness, now)
+
+    def _summarize(self, harness, now=None):
         """{day, week, month}: each {keys, total, usd, partial, rows}.
         day = today's 24 hours, week/month = the last 7/30 days, today
         included. rows = one per model, biggest first, each with its
@@ -432,6 +487,12 @@ class Tracker(threading.Thread):
                 del d[k]
 
     def state(self, harness):
+        if harness == "droid" and self.droid_org:
+            cur = self.droid_org()
+            if cur != self._dr_org:
+                with self._lock:          # flip the card right away,
+                    if cur != self._dr_org:  # not after the next scan
+                        self._sum["droid"] = self.summarize("droid")
         return self._sum.get(harness)
 
     def scan_once(self):

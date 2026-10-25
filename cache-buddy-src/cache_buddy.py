@@ -114,11 +114,17 @@ _spaces_warned = False
 
 _REPLY_CACHE = {}                         # sid -> (last_activity_at, out)
 _DESK_SIDS = (0, None)                    # (read at, sids Desktop shows)
+_HELD_SIDS = (0, {})                      # (read at, {sid: holder kind})
 
 
 def session_source(sid):
     """"desktop" / "cli" / None (not known yet). Attribute read only — the
-    set is refreshed by list_spaces and the warm-scan worker."""
+    sets are refreshed by list_spaces and the warm-scan worker. Who holds
+    the session's lock wins (a Desktop session resumed in a terminal is
+    cli, whatever its origin); the origin set says where it was made."""
+    held = _HELD_SIDS[1].get(sid)
+    if held:
+        return held
     desk = _DESK_SIDS[1]
     if desk is None:
         return None
@@ -208,12 +214,27 @@ def list_spaces(state_db=None):
                           ("windsurfSpace.resourceToSpace",)).fetchone()
         meta = sdb.execute("SELECT value FROM ItemTable WHERE key=?",
                            ("windsurfSpace.metadata",)).fetchone()
+        # one row per local session Desktop knows — current versions
+        # don't put every session in a Space, so resourceToSpace alone
+        # misses most of them (cloud sessions live under other keys)
+        srows = sdb.execute(
+            "SELECT key, value FROM ItemTable WHERE key LIKE"
+            " 'windsurf.acp.sessioninfo.session.acp/devin-cli/%'").fetchall()
         sdb.close()
         r2s = json.loads(r2s[0]) if r2s else {}
         meta = json.loads(meta[0]) if meta else {}
         desk = {m.group(1) for res in r2s.values() for m in
                 (re.search(r"cascade-acp/devin-cli/([^/?#]+)$", r)
                  for r in res) if m}
+        for k, v in srows:
+            try:
+                kind = ((json.loads(v) or {}).get("location")
+                        or {}).get("kind")
+            except ValueError:
+                kind = None
+            if kind and kind != "local":
+                continue                  # a cloud session, not Desktop's
+            desk.add(k.rsplit("/", 1)[-1])
         global _DESK_SIDS
         _DESK_SIDS = (time.time(), desk)
         for sp, resources in r2s.items():
@@ -230,11 +251,20 @@ def list_spaces(state_db=None):
         if not _spaces_warned:                  # unreadable -> all flat,
             _spaces_warned = True               # like before spaces existed
             log("spaces: state.vscdb unreadable: %s" % e)
+    # which devin.exe holds each open session right now — same cadence
+    # as the origin set (this read), and the tag's holder side
+    global _HELD_SIDS
+    try:
+        _HELD_SIDS = (time.time(), devin_cli.lock_holder_kinds())
+    except Exception:
+        pass
     # Desktop opens every session it shows as a cascade-acp resource; one
     # it never registered was started from the terminal (Devin CLI)
     if desk is not None:
+        held = _HELD_SIDS[1]
         for s in info.values():
-            s["source"] = "desktop" if s["sid"] in desk else "cli"
+            s["source"] = held.get(s["sid"]) or (
+                "desktop" if s["sid"] in desk else "cli")
     out = []
     for sp in sorted(grouped):
         items = [info[sid] for sid in grouped[sp]]
@@ -2744,14 +2774,12 @@ class Monitor(threading.Thread):
         if sid and self.cli and (self._via_proxy(sid)
                                  or session_source(sid) == "cli"):
             refresh = self._cli_refresh(sid)   # heartbeats count too
-        # sessions running through the proxy right now get the CLI tag,
-        # wherever they were created
-        proxied = (self.cli[0].recent(now - COVERAGE) if self.cli
-                   else set())
-
+        # the tag says where the session runs: a lock means a live
+        # holder (Desktop's agent or a terminal), else where it was made.
+        # Being proxied no longer means "cli" — Desktop's own agent goes
+        # through the proxy too when it was started after Buddy.
         def _src(s):
-            return ("cli" if s in proxied or s in self.cli_locked
-                    else self._source(s))
+            return ("cli" if s in self.cli_locked else self._source(s))
         # the card: the guarded session (or, once stopped, last round's),
         # then every other session whose cache is still alive — Devin
         # guards one session, so the rest are listed but not guarded
@@ -3797,12 +3825,9 @@ class _BuddyApi:
     def spaces(self):
         out = list_spaces()
         cli = getattr(self.mon, "cli", None)
-        if cli:                          # resumed in a terminal: CLI tag
-            proxied = cli[0].recent(time.time() - COVERAGE)
+        if cli:
             for e in out:
                 for s in (e["items"] if e["type"] == "group" else [e]):
-                    if s["sid"] in proxied:
-                        s["source"] = "cli"
                     if self.mon._locked(s["sid"]):
                         s["source"], s["locked"] = "cli", True
         return out

@@ -1,6 +1,8 @@
 # build output (the exe goes to GitHub Releases, not the repo)
 build/
 dist/
+build-*/
+dist-*/
 *.exe
 __pycache__/
 *.pyc

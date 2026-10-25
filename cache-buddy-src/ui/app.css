@@ -1146,6 +1146,17 @@ button:disabled {
   opacity: .45;
 }
 
+/* the Droid item: its accounts fly out beside the menu */
+.hkmenu button.hassub::after {
+  content: "";
+  margin: 0 2px 0 auto;
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid #9CA3AF;
+  border-top: 1.5px solid #9CA3AF;
+  transform: rotate(45deg);
+}
+
 /* ⚙ — same box as the minimize/close buttons, a line gear */
 #btnSet {
   display: inline-flex;
@@ -1714,6 +1725,134 @@ button:disabled {
   min-width: 110px;
 }
 
+/* the accounts flyout on the harness picker's Droid item: same rowmenu
+   look, letter badges, the signed-in one ticked like .hkmenu's own */
+#droidAcctMenu {
+  z-index: 9;
+  width: max-content;                 /* don't shrink-to-fit inside .hk */
+  max-width: calc(100vw - 12px);
+}
+
+#droidAcctMenu button span {
+  min-width: 0;
+  max-width: 240px;
+}
+
+.rowmenu button.on {
+  font-weight: 600;
+}
+
+.rowmenu button.on::after {
+  content: "✓";
+  margin-left: auto;
+  color: #3FA46A;
+}
+
+.rowmenu button span {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* a saved account without its API key: the quota card can't follow it */
+.rowmenu .nokey {
+  margin-left: auto;
+  color: #C9CED4;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.rowmenu .rdiv {
+  height: 1px;
+  margin: 3px 4px;
+  background: #EEF0F2;
+}
+
+/* the account card reuses the carry card; its head chips carry a mark
+   plus the account's letter */
+.cchead .acctchip {
+  width: auto;
+  min-width: 22px;
+  padding: 3px 6px;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #047857;
+  align-items: center;
+  justify-content: center;
+  display: inline-flex;
+}
+
+.cchead .acctchip svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* "Waiting for sign-in…": a small ring spinner beside the title.
+   display overrides [hidden] on these, so say it again for them */
+.ccspin[hidden],
+.cckey[hidden],
+.cclink[hidden] {
+  display: none;
+}
+
+.ccspin {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-right: 5px;
+  border: 2px solid #DCE3E0;
+  border-top-color: #2F8F57;
+  border-radius: 50%;
+  animation: ccspin 1s linear infinite;
+  vertical-align: -1px;
+}
+
+@keyframes ccspin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ccspin { animation: none; }
+}
+
+/* the API-key step: a password field and a link-style button */
+.cckey {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 5px 8px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.cclink {
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: #2F8F57;
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* the quota card's no-key note gains a small "Add key" button */
+.qnote .qbtn {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border: 1px solid #CDEBD9;
+  border-radius: 7px;
+  background: #fff;
+  color: #2F8F57;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* a short sessions card would clip the menus: let them out while open */
 #sessCard:has(.rowmenu:not([hidden])) {
   overflow: visible;
@@ -2061,6 +2200,169 @@ button:disabled {
 
 #controls button:not(:disabled):active {
   transform: scale(.96);
+}
+
+/* the quota card's pool switch: the interval segment shrunk to head size
+   (sits outside #quotaHead so it never folds the card) */
+.qseg {
+  display: inline-flex;
+  height: 16px;
+  margin-left: 3px;
+  border-radius: 9px;
+  flex: none;
+}
+
+.qseg[hidden] {
+  display: none;
+}
+
+.qseg {
+  margin: 0 3px;
+}
+
+.qseg button {
+  position: relative;
+  padding: 0 6px;
+  font-size: 8.5px;
+  font-weight: 700;
+  color: #9CA3AF;
+  border-radius: 7px;
+  transition: color .2s;
+}
+
+.qseg button:hover:not(.on) {
+  color: #6B7280;
+}
+
+.qseg button.on {
+  color: #1F2328;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* hairline meter inside the thumb: the shown pool's busiest window */
+.qseg .pmeter {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  bottom: .5px;
+  height: 1.5px;
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.qseg .pmeter::before {
+  content: "";
+  display: block;
+  height: 100%;
+  width: var(--w, 0%);
+  background: var(--c, #3FA46A);
+  opacity: .85;
+  border-radius: 1px;
+  transition: width .45s ease-out, background .3s;
+}
+
+/* the other pool at >=90%: a slow-breathing dot on its letter */
+.qseg .pdot {
+  position: absolute;
+  top: .5px;
+  right: .5px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--c, #C2413D);
+  animation: pdot-breathe 2.4s ease-in-out infinite;
+}
+
+.qseg .pdot[hidden] {
+  display: none;
+}
+
+@keyframes pdot-breathe {
+  0%, 100% { opacity: .45; }
+  50% { opacity: 1; }
+}
+
+/* the droplet: one squash toward the destination on each switch */
+.qseg .ivthumb.squash {
+  animation: qthumb-squash .3s ease-out;
+}
+
+@keyframes qthumb-squash {
+  0% { transform: var(--t) scaleX(1); }
+  45% { transform: var(--t) scaleX(1.35); }
+  100% { transform: var(--t) scaleX(1); }
+}
+
+/* the new pool's rings slide in from the toggle's direction */
+#quotaRows.slide-r .qring {
+  animation: qslide-r .22s ease-out;
+}
+
+#quotaRows.slide-l .qring {
+  animation: qslide-l .22s ease-out;
+}
+
+@keyframes qslide-r {
+  from { opacity: 0; transform: translateX(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes qslide-l {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qseg .ivthumb.squash,
+  .qseg .pdot,
+  #quotaRows.slide-r .qring,
+  #quotaRows.slide-l .qring {
+    animation: none;
+  }
+}
+
+/* the droid account letter in the token header — same chip as the
+   account flyout's badges, one size smaller */
+.tokacct {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 13px;
+  height: 13px;
+  margin-left: 3px;
+  padding: 0 3px;
+  border-radius: 4px;
+  background: #ECF8F2;
+  color: #047857;
+  font-size: 8.5px;
+  font-weight: 700;
+}
+
+.tokacct[hidden] {
+  display: none;
+}
+
+.tokacct.pop {
+  animation: tokacct-pop .2s cubic-bezier(.3, 1.4, .5, 1);
+}
+
+@keyframes tokacct-pop {
+  from { transform: scale(.7); opacity: .4; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tokacct.pop {
+    animation: none;
+  }
+}
+
+.qseg .ivthumb {
+  top: 1px;
+  bottom: 1px;
+  left: 1px;
+  border-radius: 7px;
 }
 
 /* interval: a white thumb slides between the two values */

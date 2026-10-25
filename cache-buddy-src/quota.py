@@ -8,8 +8,12 @@ SeatManagementService/GetUserStatus.
 
 Factory: a Factory API key (fk-...) the user gave the panel, kept in Windows
 Credential Manager (DPAPI, the user's own login), sent as a Bearer to
-GET /api/billing/limits. droid's own login is never read: its refresh token
-rotates, so spending it here would sign droid out.
+GET /api/billing/limits. Keys are per account: each is stored under
+"CacheBuddy/factory-api-key/<orgId>" and the one matching the signed-in
+account (droid_accounts.live_org) is used, so the card follows a switch.
+The single original entry (".../factory-api-key") is migrated on sight to
+its key's own org — nothing is deleted. droid's own login is never read:
+its refresh token rotates, so spending it here would sign droid out.
 
 Secrets stay in memory: never logged, never written to the cache. The cache
 holds only percentages, times and balances, so a fresh start shows the last
@@ -30,9 +34,16 @@ FACTORY_API = "https://api.factory.ai"
 FACTORY_VERSION = "0.233.0"            # the droid release requests say they are
 DEVIN_SERVER = "https://server.codeium.com"
 DEVIN_VERSION = "3000.11.3"
-CRED_TARGET = "CacheBuddy/factory-api-key"
+CRED_TARGET = "CacheBuddy/factory-api-key"   # the first, account-less key
 TIMEOUT = 15
 REFRESH = 5 * 60                       # quota moves slowly; spare the limits
+# the signed-in Droid account's org — cc_buddy points this at
+# droid_accounts.live_org once that module is loaded
+factory_org = lambda: None
+
+
+def key_target(org):
+    return CRED_TARGET + "/" + org
 
 
 def log(msg):                          # replaced by the buddy's own log
@@ -223,21 +234,92 @@ def fetch_devin():
     return devin_quota((js.get("userStatus") or {}).get("planStatus") or {})
 
 
+def _factory_headers(key):
+    return {"Authorization": "Bearer " + key, "X-Factory-Client": "cli",
+            "X-Client-Version": FACTORY_VERSION,
+            "User-Agent": "factory-cli/" + FACTORY_VERSION,
+            "Accept": "application/json"}
+
+
+def whoami_org(key):
+    """The orgId a Factory API key belongs to (GET /api/cli/whoami).
+    bad_key on 401/403, network on anything else unusable."""
+    req = urllib.request.Request(FACTORY_API + "/api/cli/whoami",
+                                 headers=_factory_headers(key))
+    st, js = _call(req)
+    if st in (401, 403):
+        raise RuntimeError("bad_key")
+    if st != 200 or not isinstance(js, dict) or not js.get("orgId"):
+        raise RuntimeError("network")
+    return js["orgId"]
+
+
+_legacy_key = []                         # [(key, org or None)] once asked
+
+
+def _legacy():
+    """The first account-less key, migrated on sight to its own org's
+    target (whoami asked once per process). (key, org) or (None, None)."""
+    if not _legacy_key:
+        k = cred_get(CRED_TARGET)
+        org = None
+        if k:
+            try:
+                org = whoami_org(k)
+            except RuntimeError:
+                pass
+            if org:                      # per-org target; legacy stays
+                try:
+                    cred_set(k, key_target(org))
+                except OSError:
+                    pass
+        _legacy_key.append((k, org))
+    return _legacy_key[0]
+
+
+def _factory_key(org):
+    """The API key for the signed-in account's org, or None."""
+    if not org:
+        return None
+    k = cred_get(key_target(org))
+    if k:
+        return k
+    k, lorg = _legacy()
+    return k if k and lorg == org else None
+
+
 def fetch_factory():
-    key = cred_get()
+    org = factory_org()
+    key = _factory_key(org)
     if not key:
         raise RuntimeError("no_key")
-    req = urllib.request.Request(FACTORY_API + "/api/billing/limits", headers={
-        "Authorization": "Bearer " + key, "X-Factory-Client": "cli",
-        "X-Client-Version": FACTORY_VERSION,
-        "User-Agent": "factory-cli/" + FACTORY_VERSION,
-        "Accept": "application/json"})
+    req = urllib.request.Request(FACTORY_API + "/api/billing/limits",
+                                 headers=_factory_headers(key))
     st, js = _call(req)
     if st in (401, 403):
         raise RuntimeError("bad_key")
     if st != 200 or not isinstance(js, dict) or not (js.get("limits") or {}).get("standard"):
         raise RuntimeError("http_%d" % st)
-    return factory_quota(js)
+    out = factory_quota(js)
+    out["org"] = org
+    return out
+
+
+def set_key(org, key):
+    """Save an API key for one account. It must belong to that account —
+    checked against /api/cli/whoami — so the card never shows the wrong
+    plan."""
+    key = (key or "").strip()
+    if not key.startswith("fk-"):
+        return {"ok": False, "error": "bad_format"}
+    try:
+        o = whoami_org(key)
+    except RuntimeError as e:
+        return {"ok": False, "error": str(e)}   # bad_key / network
+    if o != org:
+        return {"ok": False, "error": "wrong_account", "key_org": o}
+    cred_set(key, key_target(org))
+    return {"ok": True}
 
 
 # ------------------------------------------------------------------ poller
@@ -269,7 +351,18 @@ class Poller(threading.Thread):
             pass
 
     def state(self, name):
-        return self.data.get(name)
+        d = self.data.get(name)
+        if name == "droid" and d and d.get("org"):
+            cur = factory_org()
+            if cur and d["org"] != cur:
+                # the previous account's numbers: hide them and ask again
+                # — once per org, not on every panel tick (a miss keeps the
+                # entry stamped with the new org, so this resolves itself)
+                if getattr(self, "_kicked_org", None) != cur:
+                    self._kicked_org = cur
+                    self.refresh()
+                return None
+        return d
 
     def refresh(self):
         """Ask again now (the panel's refresh button). A click while a poll
@@ -294,7 +387,17 @@ class Poller(threading.Thread):
                 self.data[name] = q
             except Exception as e:        # keep the last numbers on a miss
                 why = str(e) if isinstance(e, RuntimeError) else "network"
-                self.data[name] = dict(prev, error=why, stale=bool(prev))
+                d = dict(prev, error=why, stale=bool(prev))
+                if name == "droid":
+                    cur = factory_org()
+                    if cur and prev.get("org") != cur:
+                        # the account switched: never carry the old one's
+                        # numbers — just the error, stamped with the new org
+                        d = {"error": why, "org": cur, "stale": False,
+                             "at": prev.get("at")}
+                    else:
+                        d["org"] = cur or prev.get("org")
+                self.data[name] = d
                 if why != (prev.get("error") or ""):
                     log("quota %s: %s" % (name, why))
 
@@ -330,8 +433,13 @@ def main(argv):
         if not k.startswith("fk-"):
             print("a Factory API key starts with fk-")
             return 1
-        cred_set(k)
-        print("saved to Windows Credential Manager as %s" % CRED_TARGET)
+        try:
+            org = whoami_org(k)
+        except RuntimeError as e:
+            print("key not saved: %s" % e)
+            return 1
+        cred_set(k, key_target(org))
+        print("saved to Windows Credential Manager as %s" % key_target(org))
     elif cmd == "clear-factory-key":
         print("removed" if cred_delete() else "there was none")
     elif cmd == "show":

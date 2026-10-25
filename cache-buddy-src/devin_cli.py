@@ -868,6 +868,36 @@ def scan_unrouted(port=PORT):
     return out
 
 
+def lock_holder_kinds():
+    """{sid: "desktop"|"cli"} — which devin.exe holds each open session's
+    lock. \\extensions\\windsurf\\ in the holder's exe path is Desktop's own
+    agent; any other devin.exe is a terminal. Same read-only scan as
+    scan_unrouted."""
+    out = {}
+    try:
+        names = [f for f in os.listdir(LOCKS) if f.endswith(".lock")]
+    except OSError:
+        return out
+    for f in names:
+        path = os.path.join(LOCKS, f)
+        try:
+            with open(path, "rb") as fh:
+                fh.read(1)
+            continue                      # readable = nobody holds it
+        except PermissionError:
+            pass
+        except OSError:
+            continue
+        for pid in _lock_holders(path):
+            exe, _val = _proc_env(pid, ENV_KEY)
+            if not exe:
+                continue
+            out[f[:-5]] = ("desktop" if "\\extensions\\windsurf\\"
+                           in exe.lower() else "cli")
+            break
+    return out
+
+
 # -------------------------------------------------------------- launch
 
 def ping(port=PORT, timeout=1.0):

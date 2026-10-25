@@ -157,8 +157,8 @@ const ZH = {
     "Devin 未登录 · 运行 devin auth login",
   "Devin's sign-in expired · run devin auth login":
     "Devin 登录过期 · 运行 devin auth login",
-  "No Factory API key · run quota.py set-factory-key":
-    "没有 Factory API key · 运行 quota.py set-factory-key",
+  "This account has no API key": "当前账号没有 API key",
+  "Add key": "添加 key",
   "Factory refused the API key · make a new one":
     "Factory 拒绝了这个 API key · 重新建一个",
   "Couldn't reach the server · showing the last numbers":
@@ -178,6 +178,46 @@ const ZH = {
   "Couldn't restart Factory · open it yourself": "没能重启 Factory · 请手动打开",
   "attachment in the Factory composer · waiting":
     "Factory 输入框里有附件 · 等清空",
+  "Switch to {0}": "切换到 {0}",
+  "Factory will close and reopen; a reply in progress is interrupted. Sessions are local and stay.":
+    "Factory 会关闭再重开，正在回复的会被打断。会话都在本地，不会丢。",
+  "Switch": "切换",
+  "Switching…": "切换中…",
+  "Switched to {0}": "已切换到 {0}",
+  "Couldn't switch: {0}": "切换失败：{0}",
+  "Couldn't launch Factory · open it yourself": "没能启动 Factory · 请手动打开",
+  "{0} droid CLI running · they could write the old account back":
+    "有 {0} 个 droid CLI 在运行 · 可能把旧账号写回去",
+  "Close them and switch": "关掉它们再切换",
+  "Close them and start": "关掉它们再继续",
+  "Add account": "添加账号",
+  "Add a Droid account": "添加 Droid 账号",
+  "Buddy saves the current account, then restarts Factory on its sign-in page. Sign in with the new account's email and code once — switching after that needs no code.":
+    "Buddy 会先保存当前账号，然后重启 Factory 到登录页。用新账号的邮箱和验证码登录一次，以后切换都不用再输。",
+  "Don't use Factory's Log out — it can invalidate saved accounts.":
+    "别在 Factory 里点退出登录 — 那会让已保存的账号失效。",
+  "Start": "开始",
+  "Waiting for sign-in…": "等待登录…",
+  "Sign in in the Factory window. This continues on its own.":
+    "在 Factory 窗口里登录就行，这里会自动继续。",
+  "Cancel (restore {0})": "取消（恢复 {0}）",
+  "previous account": "上一个账号",
+  "Restored {0}": "已恢复 {0}",
+  "Added {0} · account {1}": "已添加 {0} · 账号 {1}",
+  "Already saved · updated {0}": "这个账号已保存过 · 已更新 {0}",
+  "Factory API key · account {0}": "Factory API key · 账号 {0}",
+  "One per account · the quota card follows the account you're on.":
+    "每个账号一把 · 额度卡片会跟着当前账号走。",
+  "Get a key on Factory": "去 Factory 申请 key",
+  "Skip": "跳过",
+  "Save key": "保存 key",
+  "Saving…": "保存中…",
+  "a Factory API key starts with fk-": "Factory API key 以 fk- 开头",
+  "This key belongs to account {0}": "这把 key 是账号 {0} 的",
+  "Factory refused this key": "Factory 拒绝了这把 key",
+  "Couldn't reach Factory": "连不上 Factory",
+  "Saved · the quota card now follows this account": "已保存 · 额度卡片会跟着这个账号",
+  "No API key · quota won't show": "没有 API key · 不显示额度",
   "CDP send failed": "CDP 发送失败",
   "UI automation stuck": "界面自动化卡住",
   "upstream HTTP {0}": "上游 HTTP {0}",
@@ -266,6 +306,9 @@ const ZH = {
   "{0} total": "共 {0} 个",
   "hit": "命中",
   "Token use": "Token 用量",
+  "Standard": "标准",
+  "{0} · {1}% used": "{0} · 已用 {1}%",
+  "Droid account {0}": "Droid 账号 {0}",
   "Expand": "展开",
   "Collapse": "收起",
 };
@@ -1206,7 +1249,7 @@ const QUOTA_FOLD = { "5h": "5h", day: "Daily", week: "Weekly",
 const QUOTA_ERROR = {
   no_login: "Not signed in to Devin · run devin auth login",
   signed_out: "Devin's sign-in expired · run devin auth login",
-  no_key: "No Factory API key · run quota.py set-factory-key",
+  no_key: "This account has no API key",
   bad_key: "Factory refused the API key · make a new one",
 };
 
@@ -1437,7 +1480,7 @@ function paintTick(grow) {
   const { w, used, col } = t;
   box.querySelector(".qtdot").style.background = col;
   box.querySelector(".qtlab").textContent =
-    (w.core ? T("Core · ") : "") + T(QUOTA_FOLD[w.key] || w.key);
+    (w.core && !poolBoth ? T("Core · ") : "") + T(QUOTA_FOLD[w.key] || w.key);
   const bar = box.querySelector(".qtbar"), fill = bar.firstChild;
   bar.style.setProperty("--c", col);
   bar.classList.toggle("hot", used >= 90);
@@ -1479,6 +1522,59 @@ function stepTick() {
       { opacity: 1, transform: "none" }],
       { duration: 320, easing: "cubic-bezier(.2,.7,.3,1)" });
   };
+}
+
+/* the S/C pool switch: plans with both pools show a small segment in
+   the head; one pool means no toggle and the windows show as today.
+   poolBoth tells the legend to drop its "Core ·" prefix (the toggle
+   already names the pool). */
+let quotaPool = localStorage.getItem("cb.quotaPool") || "s";
+let poolBoth = false;
+
+function quotaWindows(windows) {
+  const s = windows.filter(w => !w.core), c = windows.filter(w => w.core);
+  poolBoth = s.length > 0 && c.length > 0;
+  $("segPool").hidden = !poolBoth;
+  if (!poolBoth) return windows;
+  if (quotaPool !== "c") quotaPool = "s";   // a gone pool falls back to S
+  const ws = quotaPool === "c" ? c : s;
+  const seg = $("segPool");
+  for (const b of seg.querySelectorAll("button"))
+    b.classList.toggle("on", b.dataset.pool === quotaPool);
+  movePoolThumb();
+  // the thumb's hairline: the shown pool's busiest window, in its ring
+  // colour (refresh keeps the transition; a switch restarts from 0 in
+  // the click handler before this runs)
+  const pools = { s, c };
+  const shown = pools[quotaPool] || [];
+  const hot = shown.reduce((m, w) => Math.max(m, w.used || 0), 0);
+  const i = shown.findIndex(w => (w.used || 0) === hot);
+  const meter = $("poolThumb").querySelector(".pmeter");
+  meter.style.setProperty("--w", Math.round(hot) + "%");
+  meter.style.setProperty("--c", ringColor(RING_BASE[i < 0 ? 2 : i] || RING_BASE[2], hot));
+  // the hidden pool at >=90% warns on its letter — Core can fill up
+  // while the card shows S
+  const other = quotaPool === "c" ? "s" : "c";
+  const oHot = (pools[other] || []).reduce((m, w) => Math.max(m, w.used || 0), 0);
+  const ob = seg.querySelector('button[data-pool="' + other + '"]');
+  const dot = ob.querySelector(".pdot");
+  dot.hidden = oHot < 90;
+  if (!dot.hidden) {
+    dot.style.setProperty("--c", ringColor(RING_BASE[2], oHot));
+    ob.title = T("{0} · {1}% used", T(other === "c" ? "Droid Core" : "Standard"),
+                 Math.round(oHot));
+  }
+  return ws;
+}
+
+function movePoolThumb() {
+  const on = $("segPool").querySelector("button.on"), th = $("poolThumb");
+  th.style.opacity = on ? 1 : 0;
+  if (!on) return;
+  th.style.width = on.offsetWidth + "px";
+  const t = "translateX(" + (on.offsetLeft - 2) + "px)";
+  th.style.transform = t;
+  th.style.setProperty("--t", t);      // the squash keyframes keep it
 }
 
 let tickTimer = 0;
@@ -1548,7 +1644,7 @@ function renderQuotaRings(windows, loc) {
       const l = ls[i];
       l.querySelector("i").style.background = col;
       l.querySelector(".qlab").textContent =
-        (w.core ? T("Core · ") : "") + T(QUOTA_LABEL[w.key] || w.key);
+        (w.core && !poolBoth ? T("Core · ") : "") + T(QUOTA_LABEL[w.key] || w.key);
       const pct = l.querySelector(".qpct");
       pct.textContent = Math.round(w.used) + "%";
       pct.style.color = used >= 70 ? col : "";
@@ -1582,13 +1678,22 @@ function renderQuota(q) {
   const meta = $("quotaMeta");
   meta.textContent = old ? T("checked {0}", relTime(q.at)) : bits.join(" · ");
   meta.title = bits.join(" · ");
-  renderQuotaRings(q.windows || [], loc);
-  renderQuotaTick(q.windows || [], loc);
+  const ws = quotaWindows(q.windows || []);
+  renderQuotaRings(ws, loc);
+  renderQuotaTick(ws, loc);
   const note = $("quotaNote");
   const why = q.error && (QUOTA_ERROR[q.error] ||
     "Couldn't reach the server · showing the last numbers");
   note.hidden = !why;
   note.textContent = why ? T(why) : "";
+  if (q.error === "no_key" && backend === "droid") {
+    // the key is per account: offer to add this account's right here
+    const b = document.createElement("button");
+    b.className = "qbtn";
+    b.textContent = T("Add key");
+    b.onclick = droidKeyAsk;
+    note.appendChild(b);
+  }
 }
 
 /* ------------------------------------------------ token usage */
@@ -1598,6 +1703,7 @@ function renderQuota(q) {
    into cache read / cache write / input / output. */
 let tokPeriod = localStorage.getItem("cb.tokPeriod") || "week";
 let tokSig = "";
+let tokOrg = null;              // droid account org the chart shows
 let tokAnim = true;             // grow in: first paint and period switches
 let tokCur = null;              // the period's data the tooltips read
 let tokColors = {};             // model -> colour, stable across periods
@@ -1735,6 +1841,22 @@ function renderTokens(u) {
   $("tokTotal").textContent = p.total ? fmtBig(p.total) : "0";
   $("tokUsd").textContent = p.usd != null && p.total
     ? "≈" + fmtUsd(p.usd) + (p.partial ? "+" : "") : "";
+  // the droid account these numbers belong to: its letter, popping once
+  // on a switch (and the chart regrows below via tokAnim)
+  const acct = $("tokAcct"), org = u.account && u.account.org;
+  if (org !== tokOrg) {
+    if (org && u.account.name) {
+      acct.textContent = u.account.name;
+      acct.title = T("Droid account {0}", u.account.name);
+      acct.hidden = false;
+      acct.classList.remove("pop");
+      void acct.offsetWidth;
+      acct.classList.add("pop");
+    }
+    tokAnim = true;                            // the chart regrows
+    tokOrg = org || null;
+  }
+  acct.hidden = !org;
   // rebuild only when the numbers (or the hour) move, so nothing jumps
   const hour = new Date().getHours();
   const sig = tokPeriod + "|" + lang + "|" + hour + "|" +
@@ -2148,11 +2270,15 @@ function renderBackends(s) {
     b.classList.toggle("on", b.dataset.bk === backend);
     b.setAttribute("aria-checked", b.dataset.bk === backend);
     b.disabled = !list.includes(b.dataset.bk);
+    // the Droid item carries the accounts flyout's chevron
+    b.classList.toggle("hassub",
+      b.dataset.bk === "droid" && list.includes("droid"));
   }
 }
 
 function setMenu(open) {
   $("hkMenu").hidden = !open;
+  if (!open) $("droidAcctMenu").hidden = true;
   $("hkBtn").setAttribute("aria-expanded", open);
 }
 
@@ -2302,9 +2428,37 @@ async function openRowMenu(e, s) {
   m.querySelector("button").focus();
 }
 
-/* the flyout beside "Droid ▸": one row per other account. To the right
-   of the menu, else to its left; a narrow window fits neither, so the
-   menu slides left until the flyout fits on its right */
+/* a flyout beside a menu item (Droid ▸ in the row menu, Droid in the
+   harness picker): to the menu's right, else its left; a narrow window
+   fits neither, so the menu slides left until the flyout fits. `host`
+   is the positioned ancestor the menu and flyout live in. */
+function flyoutPlace(sub, item, menu, host) {
+  const card = host.getBoundingClientRect();
+  const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+  sub.hidden = false;
+  // offsetWidth/Height, not getBoundingClientRect: the rowmenu pops in
+  // with a scale transform (tippop) and the rect is smaller mid-flight
+  const w = sub.offsetWidth, h = sub.offsetHeight, gap = 2, edge = 6;
+  const m = menu.getBoundingClientRect();
+  const r = item.getBoundingClientRect();
+  let x, y;                                    // viewport px
+  if (m.right + gap + w <= vw - edge) {        // right of the menu
+    x = m.right + gap;
+    y = r.top - 4;
+  } else if (m.left - gap - w >= edge) {       // left of it
+    x = m.left - gap - w;
+    y = r.top - 4;
+  } else {                                     // too narrow: below the item
+    x = Math.min(r.left, vw - edge - w);
+    y = Math.min(m.bottom + gap, vh - edge - h);
+  }
+  x = Math.max(edge, Math.min(x, vw - edge - w));
+  y = Math.max(edge, Math.min(y, vh - edge - h));
+  sub.style.left = (x - card.left) + "px";
+  sub.style.top = (y - card.top) + "px";
+}
+
+/* the flyout beside "Droid ▸": one row per other account */
 function openAcctMenu(item, s, others) {
   const sub = $("acctMenu");
   sub.innerHTML = "";
@@ -2315,25 +2469,311 @@ function openAcctMenu(item, s, others) {
     b.onclick = ev => { ev.stopPropagation(); closeRowMenu(); copyAsk(s, a); };
     sub.appendChild(b);
   }
-  const card = $("sessCard").getBoundingClientRect();
-  const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
-  const menu = $("rowMenu");
-  sub.hidden = false;
-  const w = sub.offsetWidth, gap = 2, edge = 6;
-  let m = menu.getBoundingClientRect();
-  let x;                                       // viewport px
-  if (m.right + gap + w <= vw - edge) x = m.right + gap;
-  else if (m.left - gap - w >= edge) x = m.left - gap - w;
-  else {                                       // slide the menu over
-    const left = Math.max(edge, vw - edge - w - gap - m.width);
-    menu.style.left = (left - card.left) + "px";
-    m = menu.getBoundingClientRect();
-    x = Math.min(m.right + gap, vw - edge - w);
+  flyoutPlace(sub, item, $("rowMenu"), $("sessCard"));
+}
+
+/* -------------------------------------- Droid account switching */
+/* The harness picker's Droid item grows a flyout: saved accounts (the
+   letter Buddy gave them, never the profile folder's name) + "add".
+   The last list renders at once, the fresh one replaces it. */
+let droidProfs = null;               // last rows droid_profiles() sent
+let acctLock = false;                // add-step 2: scrim/Escape do nothing
+
+function renderDroidAccts(rows) {
+  const sub = $("droidAcctMenu");
+  sub.innerHTML = "";
+  for (const a of rows) {
+    const b = menuItem("", a.email || a.name);
+    const ico = b.querySelector(".hico");
+    ico.textContent = a.letter || "?";
+    ico.classList.add("acct");
+    const sp = b.querySelector("span");
+    sp.textContent = a.email || a.name;
+    b.title = a.email || "";
+    if (a.current) b.classList.add("on");
+    if (!a.has_key) {
+      const m = document.createElement("i");
+      m.className = "nokey";
+      m.textContent = "·";
+      m.title = T("No API key · quota won't show");
+      b.appendChild(m);
+    }
+    if (!a.current)
+      b.onclick = ev => { ev.stopPropagation(); setMenu(false); droidSwitchAsk(a); };
+    sub.appendChild(b);
   }
-  const r = item.getBoundingClientRect();
-  const y = Math.min(r.top - 4, vh - edge - sub.offsetHeight);
-  sub.style.left = (x - card.left) + "px";
-  sub.style.top = (Math.max(edge, y) - card.top) + "px";
+  const div = document.createElement("div");
+  div.className = "rdiv";
+  sub.appendChild(div);
+  const add = menuItem("", "");
+  add.querySelector(".hico").textContent = "+";
+  add.querySelector("span").textContent = T("Add account");
+  add.onclick = ev => { ev.stopPropagation(); setMenu(false); droidAddAsk(); };
+  sub.appendChild(add);
+}
+
+function openDroidAccts(item) {
+  const sub = $("droidAcctMenu");
+  if (droidProfs) {
+    renderDroidAccts(droidProfs);
+    flyoutPlace(sub, item, $("hkMenu"), $("hk"));
+  }
+  api().droid_profiles().then(rows => {
+    droidProfs = rows || [];
+    if ($("hkMenu").hidden) return;       // menu closed while it asked
+    renderDroidAccts(droidProfs);
+    flyoutPlace(sub, item, $("hkMenu"), $("hk"));
+  }).catch(() => {
+    if (!droidProfs) sub.hidden = true;
+  });
+}
+
+/* the account card: the carry card's grammar — head chips, title, stats,
+   warn, two buttons — plus a password field and a link for the key step */
+function acctCardShow() {
+  const c = $("acctCard");
+  c.classList.remove("done", "fail");
+  c.hidden = false;
+  $("carryScrim").hidden = false;
+  return c;
+}
+
+function closeAcct() {
+  $("acctCard").hidden = true;
+  $("carryScrim").hidden = true;
+  acctLock = false;
+}
+
+function acctCardReset(c) {
+  const yes = c.querySelector(".ccyes"), no = c.querySelector(".ccno");
+  yes.hidden = false; yes.disabled = false;
+  no.textContent = T("Cancel");
+  c.querySelector(".ccwarn").hidden = true;
+  c.querySelector(".ccsub").hidden = true;
+  c.querySelector(".cckey").hidden = true;
+  c.querySelector(".cclink").hidden = true;
+  c.querySelector(".ccspin").hidden = true;
+  return { yes, no };
+}
+
+function acctHead(c, fromLetter, toLabel) {
+  const ico = HARNESS.droid ? HARNESS.droid.icon() : "";
+  c.querySelector(".ccfrom").innerHTML = ico + (fromLetter ? "<b>" + fromLetter + "</b>" : "");
+  c.querySelector(".ccto").innerHTML = ico + "<b>" + toLabel + "</b>";
+}
+
+function acctDone(c, text) {
+  c.classList.add("done");
+  c.querySelector(".ccstats").textContent = text;
+  c.querySelector(".ccwarn").hidden = true;
+  const { yes, no } = { yes: c.querySelector(".ccyes"), no: c.querySelector(".ccno") };
+  yes.hidden = true;
+  no.textContent = "OK";
+  no.onclick = () => { closeAcct(); acctCardReset(c); };
+}
+
+function curLetter() {
+  const cur = (droidProfs || []).find(a => a.current);
+  return cur ? cur.letter : "?";
+}
+
+function letterForOrg(org) {
+  const a = (droidProfs || []).find(x => x.org === org);
+  return a ? a.letter : "?";
+}
+
+/* switch to a saved account: confirm first — Factory restarts and a
+   reply in progress is cut; a foreign droid.exe could write the old
+   account back, so it's a warning with a force option, not a block */
+function droidSwitchAsk(a) {
+  const c = acctCardShow();
+  const { yes, no } = acctCardReset(c);
+  const stats = c.querySelector(".ccstats"), warn = c.querySelector(".ccwarn");
+  acctHead(c, curLetter(), a.letter || "?");
+  c.querySelector(".cctext").textContent = T("Switch to {0}", a.email);
+  const what = T("Factory will close and reopen; a reply in progress is " +
+    "interrupted. Sessions are local and stay.");
+  stats.textContent = what;
+  yes.textContent = T("Switch");
+  no.onclick = closeAcct;
+  let force = false;
+  yes.onclick = async () => {
+    yes.disabled = true;
+    stats.textContent = T("Switching…");
+    let r;
+    try { r = await api().droid_switch(a.name, force); } catch (e) { r = { ok: false }; }
+    if (c.hidden) return;
+    if (r && r.ok) {
+      droidProfs = null;
+      acctDone(c, T("Switched to {0}", r.email) +
+        (r.note ? " · " + T("Couldn't launch Factory · open it yourself") : ""));
+    } else if (r && r.error === "cli_running") {
+      warn.textContent = T("{0} droid CLI running · they could write the old account back", r.count);
+      warn.hidden = false;
+      stats.textContent = what;
+      yes.textContent = T("Close them and switch");
+      yes.disabled = false;
+      force = true;
+    } else {
+      c.classList.add("fail");
+      stats.textContent = T("Couldn't switch: {0}", (r && (r.error || r.detail)) || "error");
+    }
+  };
+}
+
+/* add an account: clear the live login so Factory opens its sign-in
+   page (its own Log out could revoke the saved account); the new login
+   is saved when it lands, cancel restores the previous one */
+function droidAddAsk() {
+  const c = acctCardShow();
+  const { yes, no } = acctCardReset(c);
+  const stats = c.querySelector(".ccstats"), warn = c.querySelector(".ccwarn"),
+    sub = c.querySelector(".ccsub");
+  acctHead(c, curLetter(), "+");
+  c.querySelector(".cctext").textContent = T("Add a Droid account");
+  const what = T("Buddy saves the current account, then restarts Factory " +
+    "on its sign-in page. Sign in with the new account's email and code " +
+    "once — switching after that needs no code.");
+  stats.textContent = what;
+  sub.textContent = T("Don't use Factory's Log out — it can invalidate saved accounts.");
+  sub.hidden = false;
+  yes.textContent = T("Start");
+  no.onclick = closeAcct;
+  let force = false;
+  yes.onclick = async () => {
+    yes.disabled = true;
+    stats.textContent = T("Switching…");
+    let r;
+    try { r = await api().droid_add_begin(force); } catch (e) { r = { ok: false }; }
+    if (c.hidden) return;
+    if (r && r.ok) return addWait(c, r.prev_email);
+    if (r && r.error === "cli_running") {
+      warn.textContent = T("{0} droid CLI running · they could write the old account back", r.count);
+      warn.hidden = false;
+      stats.textContent = what;
+      yes.textContent = T("Close them and start");
+      yes.disabled = false;
+      force = true;
+    } else {
+      c.classList.add("fail");
+      stats.textContent = T("Couldn't switch: {0}", (r && (r.error || r.detail)) || "error");
+    }
+  };
+}
+
+let addPollTimer = 0;
+
+async function addWait(c, prevEmail) {
+  const { yes, no } = { yes: c.querySelector(".ccyes"), no: c.querySelector(".ccno") };
+  const stats = c.querySelector(".ccstats"), warn = c.querySelector(".ccwarn");
+  acctLock = true;                       // scrim click and Escape are inert
+  c.querySelector(".ccspin").hidden = false;
+  c.querySelector(".cctext").textContent = T("Waiting for sign-in…");
+  stats.textContent = T("Sign in in the Factory window. This continues on its own.");
+  warn.hidden = true;
+  yes.hidden = true;
+  no.textContent = T("Cancel (restore {0})", prevEmail || T("previous account"));
+  clearTimeout(addPollTimer);
+  let cancelled = false;
+  no.onclick = async () => {
+    if (cancelled) return;
+    cancelled = true;
+    clearTimeout(addPollTimer);
+    acctLock = false;
+    no.disabled = true;
+    let r;
+    try { r = await api().droid_add_cancel(); } catch (e) { r = { ok: false }; }
+    no.disabled = false;
+    if (c.hidden) return;
+    c.querySelector(".ccspin").hidden = true;
+    if (r && r.ok && r.restored) return acctDone(c, T("Restored {0}", r.restored));
+    if (r && r.ok && r.kept) return addDone(c, { email: r.email, letter: r.letter, existing: true });
+    c.classList.add("fail");
+    stats.textContent = T("Couldn't switch: {0}", (r && (r.error || r.detail)) || "error");
+  };
+  const tick = async () => {
+    if (c.hidden || cancelled) return;
+    let r;
+    try { r = await api().droid_add_poll(); } catch (e) { r = null; }
+    if (c.hidden || cancelled) return;
+    if (r && r.state === "done") {
+      acctLock = false;
+      c.querySelector(".ccspin").hidden = true;
+      droidProfs = null;
+      return addDone(c, r);
+    }
+    addPollTimer = setTimeout(tick, 1500);
+  };
+  addPollTimer = setTimeout(tick, 1500);
+}
+
+function addDone(c, r) {
+  const stats = c.querySelector(".ccstats");
+  c.classList.add("done");
+  stats.textContent = r.existing
+    ? T("Already saved · updated {0}", r.email)
+    : T("Added {0} · account {1}", r.email, r.letter || "?");
+  c.querySelector(".ccwarn").hidden = true;
+  keyStep(c, { org: r.org, letter: r.letter || "?", email: r.email });
+}
+
+/* the API-key step: one per account — the quota card follows the
+   account you're on. Also opened standalone from the quota card's
+   "no API key" note. */
+function keyStep(c, acct) {
+  const { yes, no } = acctCardReset(c);
+  const stats = c.querySelector(".ccstats"), warn = c.querySelector(".ccwarn"),
+    sub = c.querySelector(".ccsub"), key = c.querySelector(".cckey"),
+    link = c.querySelector(".cclink");
+  c.querySelector(".cctext").textContent = T("Factory API key · account {0}", acct.letter);
+  sub.textContent = T("One per account · the quota card follows the account you're on.");
+  sub.hidden = false;
+  key.hidden = false;
+  key.value = "";
+  link.hidden = false;
+  link.textContent = T("Get a key on Factory");
+  link.onclick = () => api().open_url("https://app.factory.ai/settings/api-keys");
+  no.textContent = T("Skip");
+  no.onclick = closeAcct;
+  yes.textContent = T("Save key");
+  yes.onclick = async () => {
+    yes.disabled = true;
+    stats.textContent = T("Saving…");
+    warn.hidden = true;
+    let r;
+    try { r = await api().droid_set_key(acct.org, key.value.trim()); } catch (e) { r = { ok: false }; }
+    if (c.hidden) return;
+    yes.disabled = false;
+    if (r && r.ok) {
+      if (droidProfs) {                       // refresh the has_key mark
+        const p = droidProfs.find(x => x.org === acct.org);
+        if (p) p.has_key = true;
+      }
+      return acctDone(c, T("Saved · the quota card now follows this account"));
+    }
+    const err = r && r.error;
+    warn.textContent = err === "wrong_account" ? T("This key belongs to account {0}", letterForOrg(r.key_org))
+      : err === "bad_key" ? T("Factory refused this key")
+      : err === "bad_format" ? T("a Factory API key starts with fk-")
+      : T("Couldn't reach Factory");
+    warn.hidden = false;
+    stats.textContent = "";
+  };
+}
+
+/* the quota card's no-key note: the per-account key is missing — a way
+   to add it right there for the signed-in account */
+async function droidKeyAsk() {
+  let acct = (droidProfs || []).find(a => a.current);
+  if (!acct) {
+    try { droidProfs = (await api().droid_profiles()) || []; } catch (e) { }
+    acct = (droidProfs || []).find(a => a.current);
+  }
+  if (!acct) return;
+  const c = acctCardShow();
+  acctCardReset(c);
+  acctHead(c, curLetter(), acct.letter || "?");
+  keyStep(c, acct);
 }
 
 /* Copy to the other account: no confirm. A see-through toast, the left
@@ -2880,7 +3320,8 @@ function fitPanel(ms) {
       if (el.hidden || cs.display === "none" || cs.position === "absolute") continue;
       bottom = Math.max(bottom, el.getBoundingClientRect().bottom);
     }
-    for (const id of ["setPop", "hkMenu"])     // room for an open popover
+    for (const id of ["setPop", "hkMenu", "droidAcctMenu"])
+                                               // room for an open popover
       if (!$(id).hidden) bottom = Math.max(bottom, $(id).getBoundingClientRect().bottom);
     h = Math.ceil(bottom - pr.top + pad);
   }
@@ -3056,7 +3497,11 @@ window.addEventListener("pywebviewready", () => {
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") { closeRowMenu(); closeCarry(); }
   });
-  $("carryScrim").onclick = closeCarry;
+  $("carryScrim").onclick = () => {          // one scrim, two cards
+    if (acctLock) return;                    // add-step 2 ignores it
+    closeCarry();
+    closeAcct();
+  };
   $("tree").addEventListener("scroll", closeRowMenu);
   applyView();
   $("drum").onclick = toggleFold;
@@ -3074,6 +3519,33 @@ window.addEventListener("pywebviewready", () => {
   };
   setQuotaFolded(quotaFolded);
   // the title folds/unfolds; folded, a click on the line skips ahead
+  for (const b of $("segPool").querySelectorAll("button"))
+    b.onclick = e => {
+      e.stopPropagation();                    // never a card fold
+      if (b.dataset.pool === quotaPool) return;
+      const toCore = b.dataset.pool === "c";
+      quotaPool = b.dataset.pool;
+      localStorage.setItem("cb.quotaPool", quotaPool);
+      // the droplet: squash once, stretching toward where it's going
+      const th = $("poolThumb");
+      th.style.transformOrigin = toCore ? "left center" : "right center";
+      th.classList.remove("squash");
+      void th.offsetWidth;
+      th.classList.add("squash");
+      // the meter restarts its fill from 0 on a switch (not on refresh)
+      const meter = th.querySelector(".pmeter");
+      meter.style.setProperty("--w", "0%");
+      for (const x of $("segPool").querySelectorAll("button"))
+        x.classList.toggle("on", x === b);
+      movePoolThumb();
+      // the new pool's rings slide in from the toggle's direction
+      const rows = $("quotaRows");
+      rows.classList.remove("slide-r", "slide-l");
+      void rows.offsetWidth;
+      rows.classList.add(toCore ? "slide-r" : "slide-l");
+      if (S && S.quota) renderQuota(S.quota);
+      setTimeout(() => rows.classList.remove("slide-r", "slide-l"), 300);
+    };
   $("quotaHead").onclick = () => setQuotaFolded(!quotaFolded, true);
   $("quotaHead").onkeydown = e => {
     if (e.key === " " || e.key === "Enter") { e.preventDefault(); setQuotaFolded(!quotaFolded, true); }
@@ -3122,6 +3594,11 @@ window.addEventListener("pywebviewready", () => {
   for (const b of $("hkMenu").children) {
     b.querySelector(".hico").innerHTML = HARNESS[b.dataset.bk].icon();
     b.onclick = () => switchBackend(b.dataset.bk);
+    // hovering Droid opens its accounts; hovering anything else folds it
+    if (b.dataset.bk === "droid")
+      b.onmouseenter = () => openDroidAccts(b);
+    else
+      b.onmouseenter = () => { $("droidAcctMenu").hidden = true; };
   }
   $("hkBtn").onclick = e => { e.stopPropagation(); setMenu($("hkMenu").hidden); };
   $("mPrev").onclick = () => gotoMonth(shiftMonth(heatMonth, -1));
@@ -3132,7 +3609,11 @@ window.addEventListener("pywebviewready", () => {
     if (!e.target.closest("#hk")) setMenu(false);
   });
   document.addEventListener("keydown", e => {
-    if (e.key === "Escape") setMenu(false);
+    if (e.key === "Escape") {
+      setMenu(false);
+      $("droidAcctMenu").hidden = true;
+      if (!acctLock && !$("acctCard").hidden) closeAcct();
+    }
   });
   for (const b of $("segIv").querySelectorAll("button"))
     b.onclick = () => api().set_interval(Number(b.dataset.iv));

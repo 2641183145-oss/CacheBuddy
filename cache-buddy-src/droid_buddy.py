@@ -239,12 +239,13 @@ def signed_in_org():
     return _ORG[1]
 
 
-def accounts(names_file):
+def accounts(names_file, extra_orgs=None):
     """The Factory accounts seen here, each with a letter Buddy gave it
     (A, B, … — droid keeps no readable account name on disk). A letter,
     once given, is kept in names_file; new accounts get the next one in
     the order their first session was made. Accounts = the organizations
-    on sessions plus the signed-in one."""
+    on sessions plus the signed-in one, plus any extra_orgs (accounts
+    saved in ~/.factory-profiles that have no session here yet)."""
     first = {}
     for s in sessions().values():
         if s["org"]:
@@ -256,6 +257,9 @@ def accounts(names_file):
     cur = signed_in_org()
     if cur:
         first.setdefault(cur, time.time())
+    for o in extra_orgs or ():
+        if o:
+            first.setdefault(o, time.time())
     names = _json(names_file) or {}
     names = {k: v for k, v in names.items() if isinstance(v, str)}
     used = set(names.values())
@@ -601,6 +605,24 @@ def _factory_exe():
     return stub if os.path.isfile(stub) else None
 
 
+def close_factory(timeout=8):
+    """Close Factory Desktop: taskkill /T first (process tree, a polite
+    close), then /F if it's still there. Shared by the restart button and
+    the account switcher — the files it holds can't be swapped while
+    it's up."""
+    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    subprocess.run(["taskkill", "/IM", "factory-desktop.exe", "/T"],
+                   capture_output=True, timeout=15, creationflags=flags)
+    t0 = time.time()
+    while _factory_running() and time.time() - t0 < timeout:
+        time.sleep(0.5)
+    if _factory_running():                     # didn't close in time
+        subprocess.run(["taskkill", "/IM", "factory-desktop.exe", "/T",
+                        "/F"], capture_output=True, timeout=15,
+                       creationflags=flags)
+        time.sleep(1)
+
+
 def restart_factory_with_cdp(timeout=20):
     """The panel's "fix and restart" button: the user agrees once, so the
     shortcuts get the flag (and keep it after updates), then Factory is
@@ -616,18 +638,8 @@ def restart_factory_with_cdp(timeout=20):
     exe = _factory_exe()
     if not exe:
         return {"ok": False, "shortcuts": n, "detail": "factory not found"}
-    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     try:
-        subprocess.run(["taskkill", "/IM", "factory-desktop.exe", "/T"],
-                       capture_output=True, timeout=15, creationflags=flags)
-        t0 = time.time()
-        while _factory_running() and time.time() - t0 < 8:
-            time.sleep(0.5)
-        if _factory_running():                 # didn't close in time
-            subprocess.run(["taskkill", "/IM", "factory-desktop.exe", "/T",
-                            "/F"], capture_output=True, timeout=15,
-                           creationflags=flags)
-            time.sleep(1)
+        close_factory()
         subprocess.Popen([exe, "--remote-debugging-port=%d"
                           % _factory_ports()[0]],
                          creationflags=0x00000008 | 0x00000200,
@@ -1335,7 +1347,10 @@ class DroidMonitor(cb.Monitor):
             self._srcmap[sid] = s["source"]
             if not visible(s, org):
                 continue
-            if s["refresh_ts"] and now - s["refresh_ts"] < cb.TTL:
+            # Factory's auto "New Session" on every launch: user lines
+            # but never answered — no cache to keep (list_spaces' rule)
+            if s["replies"] and s["refresh_ts"] and \
+                    now - s["refresh_ts"] < cb.TTL:
                 warm[sid] = (s["title"], [track(s)])
         self.warm = warm
 

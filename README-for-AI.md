@@ -94,6 +94,22 @@ directly instead. Without the port the session is held ("Factory Desktop needs i
 Same security note as above: with the port open, other programs on this PC can drive the Factory
 window — ask the person before enabling it. There is no UI-automation fallback for Factory.
 
+## Droid account switching (optional)
+
+If the person runs more than one Factory account, hovering **Droid** in the
+harness picker lists the saved accounts; clicking another one confirms, then
+Buddy closes Factory, swaps the credential files under `~/.factory`, and
+relaunches. Accounts are stored under `~/.factory-profiles/profiles/<name>/`
+(the same layout as the standalone `droid-switch.ps1`, so either tool can
+switch what the other saved); `current.txt` tracks the live one and every
+switch leaves a timestamped backup under `~/.factory-profiles/backups/`.
+"+ Add account" signs in a new one without logging the old one out — tell the
+person *not* to use Factory's own Log out for switching, it can revoke the
+saved session. The Factory API key for the quota card is per account
+(`CacheBuddy/factory-api-key/<orgId>` in Credential Manager); the panel asks
+for it after adding an account, or from the quota card's "Add key" note, and
+the old single `factory-api-key` entry is migrated automatically.
+
 ## Where things are
 
 - Log: `%USERPROFILE%\.claude\cache-buddy\buddy.log` (first place to look when something's off;

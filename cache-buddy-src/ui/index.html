@@ -34,6 +34,9 @@
                 <button data-bk="devin" role="menuitemradio"><i class="hico"></i><span>Devin</span></button>
                 <button data-bk="droid" role="menuitemradio"><i class="hico"></i><span>Droid</span></button>
               </div>
+              <!-- hovering Droid in the menu: its saved accounts fly out
+                   beside it (switch / add account) -->
+              <div id="droidAcctMenu" class="rowmenu" role="menu" hidden></div>
             </span>
           </span>
           <span class="hbtns">
@@ -75,7 +78,14 @@
       <div class="qhead">
         <span class="qtitle" id="quotaHead" role="button" tabindex="0" aria-expanded="true"><span data-i18n="Plan quota">Plan quota</span> <b id="quotaPlan" class="qplan"></b></span>
         <span class="qtick" id="quotaTick" aria-hidden="true"></span>
-        <span class="qside"><span id="quotaMeta" class="qmeta"></span><button id="btnQuota" title="Refresh"
+        <span class="qside"><span id="quotaMeta" class="qmeta"></span><!-- S/C pool switch (only when the plan
+              has both pools); the same sliding-thumb segment as the
+              interval control, shrunk down, next to the ⟳ --><span
+            class="seg ivseg qseg" id="segPool" hidden>
+            <i class="ivthumb" id="poolThumb"><b class="pmeter"></b></i><button data-pool="s"
+              title="Standard" data-i18n-title="Standard">S<i class="pdot" hidden></i></button><button data-pool="c"
+              title="Droid Core">C<i class="pdot" hidden></i></button>
+          </span><button id="btnQuota" title="Refresh"
             data-i18n-title="Refresh">⟳</button></span>
       </div>
       <div id="quotaRows" class="qrings"></div>
@@ -105,7 +115,7 @@
         <button class="drum" id="drum" aria-expanded="true">
           <span class="drumin">
             <span class="face fs"><span class="ffold" id="faceFolder"></span><span data-i18n="Sessions">Sessions</span><b id="sessCount" class="scount"></b><span id="sessN" class="sn"></span></span>
-            <span class="face ft"><svg class="fico" viewBox="0 0 16 16"><path d="M2.5 13.5h11"/><rect x="3.2" y="8" width="2.2" height="4" rx=".6"/><rect x="6.9" y="4.5" width="2.2" height="7.5" rx=".6"/><rect x="10.6" y="6.5" width="2.2" height="5.5" rx=".6"/></svg><b id="tokTotal" class="tktotal"></b><span id="tokUsd" class="tkusd"></span></span>
+            <span class="face ft"><svg class="fico" viewBox="0 0 16 16"><path d="M2.5 13.5h11"/><rect x="3.2" y="8" width="2.2" height="4" rx=".6"/><rect x="6.9" y="4.5" width="2.2" height="7.5" rx=".6"/><rect x="10.6" y="6.5" width="2.2" height="5.5" rx=".6"/></svg><b id="tokTotal" class="tktotal"></b><span id="tokUsd" class="tkusd"></span><b id="tokAcct" class="tokacct" hidden></b></span>
           </span>
         </button>
         <span class="sside">
@@ -186,6 +196,22 @@
       <div class="ccwarn" hidden></div>
       <div class="ccbtns"><button class="ccno" data-i18n="Cancel">Cancel</button><button class="ccyes"
           data-i18n="Carry over">Carry over</button></div>
+    </div>
+
+    <!-- Droid account switch / add / API key: same card grammar as the
+         carry confirm — marks with an arrow, title, stats, warn, two
+         buttons; plus a password field and a link for the key step -->
+    <div id="acctCard" class="carrycard" role="dialog" aria-modal="true" hidden>
+      <div class="cchead"><span class="ccfrom acctchip"></span><span class="ccarrow">→</span><span
+          class="ccto acctchip"></span></div>
+      <div class="cctitle"><i class="ccspin" hidden></i><span class="cctext"></span></div>
+      <div class="ccstats"></div>
+      <div class="ccsub" hidden></div>
+      <input class="cckey" type="password" placeholder="fk-…" autocomplete="off" hidden>
+      <button class="cclink" hidden></button>
+      <div class="ccwarn" hidden></div>
+      <div class="ccbtns"><button class="ccno" data-i18n="Cancel">Cancel</button><button
+          class="ccyes"></button></div>
     </div>
 
     <!-- copy to the other Factory account: no confirm, just a see-through

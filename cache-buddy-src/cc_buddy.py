@@ -37,6 +37,7 @@ from urllib.parse import urlsplit
 import cache_buddy as cb          # shared: _WinCtl, run_webview, _family, log
 import devin_cli                  # Devin CLI proxy + its env route
 import droid_buddy                # Droid (Factory) harness
+import droid_accounts             # Droid account switching
 import quota                      # Devin / Factory plan quota
 import usage                      # token usage per model, per harness
 import bridge                     # carry a session to another harness
@@ -1525,6 +1526,83 @@ class MultiApi(cb._BuddyApi):
     def droid_copy(self, sid, org):
         return bridge.copy_droid(sid, org, load_conf())
 
+    # ---- Droid account switching (flyout on the harness picker)
+    def droid_profiles(self):
+        """Saved Factory accounts for the flyout: letter, email, current,
+        has_key. [] without the Droid monitor."""
+        if not self.droid:
+            return []
+        return droid_accounts.list_accounts(self.droid.names_file)
+
+    def _droid_move(self, fn):
+        """Run a switch/add step with the monitor told Factory is
+        restarting: it holds heartbeats (no CDP error) then gives the
+        window a few seconds to load."""
+        m = self.droid
+        if m is None:
+            return {"ok": False, "error": "no_droid"}
+        m.fd_restarting = True
+        try:
+            r = fn(m.names_file)
+        finally:
+            m.fd_restarting = False
+        if r.get("ok") or r.get("state") == "done":
+            m._fd_hold, m.fails = None, 0
+            m.fd_grace = time.time() + 6
+            m.next_due = 0
+            if self.quota is not None:     # the new account's own plan
+                self.quota.refresh()
+            if self.tokens is not None:    # and its own token usage
+                self.tokens.refresh()
+        return r
+
+    def droid_switch(self, name, force=False):
+        return self._droid_move(
+            lambda nf: droid_accounts.switch(name, force=bool(force),
+                                             names_file=nf))
+
+    def droid_add_begin(self, force=False):
+        return self._droid_move(
+            lambda nf: droid_accounts.begin_add(force=bool(force)))
+
+    def droid_add_poll(self):
+        m = self.droid
+        if m is None:
+            return {"state": "waiting"}
+        r = droid_accounts.poll_add(m.names_file)
+        if r.get("state") == "done":
+            m._fd_hold, m.fails = None, 0
+            m.fd_grace = time.time() + 6
+            m.next_due = 0
+            if self.quota is not None:
+                self.quota.refresh()
+            if self.tokens is not None:
+                self.tokens.refresh()
+        return r
+
+    def droid_add_cancel(self):
+        m = self.droid
+        if m is None:
+            return {"ok": False, "error": "no_droid"}
+        return self._droid_move(
+            lambda nf: droid_accounts.cancel_add(names_file=nf))
+
+    def droid_set_key(self, org, key):
+        """A Factory API key for one account (checked against whoami)."""
+        r = quota.set_key(org, key)
+        if r.get("ok") and self.quota is not None:
+            self.quota.refresh()
+        return r
+
+    def open_url(self, url):
+        """The API-keys page in the browser — the only outbound link the
+        panel offers."""
+        if url != "https://app.factory.ai/settings/api-keys":
+            return False
+        import webbrowser
+        webbrowser.open(url)
+        return True
+
     def spaces(self):
         return self._api().spaces()
 
@@ -1878,7 +1956,8 @@ def main():
                                  ("droid", MultiApi.droid)) if m is not None)
     if which and os.name == "nt":
         quota.log = log
-        MultiApi.quota = quota.Poller(
+        quota.factory_org = droid_accounts.live_org   # quota follows the
+        MultiApi.quota = quota.Poller(                # signed-in account
             os.path.join(BUDDY_DIR, "quota-cache.json"), which)
         MultiApi.quota.start()
     # token use per model for every harness here, read from their own
@@ -1892,7 +1971,8 @@ def main():
         cc_dir=PROJECTS_DIR, devin_db=cb.DB,
         droid_dir=droid_buddy.SESS_DIR,
         droid_file=os.path.join(BUDDY_DIR, "droid-usage.json"),
-        cc_cost=usage_cost, cost=cb.turn_cost, family=cb._family)
+        cc_cost=usage_cost, cost=cb.turn_cost, family=cb._family,
+        droid_org=droid_buddy.signed_in_org)
     MultiApi.tokens.start()
     # plain `devin` goes through the proxy too — only when we own its port
     dv_routed = bool("--no-route" not in sys.argv and os.name == "nt"
