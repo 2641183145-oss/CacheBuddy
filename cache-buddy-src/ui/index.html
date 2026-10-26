@@ -158,9 +158,10 @@
 
     <!-- savings heatmap: one square per day, green depth = Buddy's saving
          (backends that send `ledger` only) -->
-    <section class="card" id="saveCard" hidden>
+    <section class="card folded" id="saveCard" hidden>
       <div class="shead">
-        <span><span data-i18n="Savings">Savings</span> <b id="saveTotal" class="stotal"></b></span>
+        <span id="saveHead" role="button" tabindex="0" aria-expanded="false"><i class="schev"
+            aria-hidden="true">›</i><span data-i18n="Savings">Savings</span> <b id="saveTotal" class="stotal"></b></span>
         <span class="mnav">
           <button id="mPrev" title="Previous month" data-i18n-title="Previous month">‹</button>
           <span id="mLabel"></span>

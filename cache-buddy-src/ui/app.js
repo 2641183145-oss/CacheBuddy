@@ -2145,6 +2145,16 @@ function tokColTip(e) {
 }
 
 
+// the savings card starts folded; a click on its title opens the squares
+let saveFolded = localStorage.getItem("cb.saveFolded") !== "0";
+function setSaveFolded(on) {
+  saveFolded = on;
+  localStorage.setItem("cb.saveFolded", on ? "1" : "0");
+  $("saveCard").classList.toggle("folded", on);
+  $("saveHead").setAttribute("aria-expanded", on ? "false" : "true");
+  if (on) $("heatTip").hidden = true;
+}
+
 function renderHeat(led) {
   const card = $("saveCard");
   card.hidden = !led;                // Devin's backend has no ledger
@@ -3534,6 +3544,11 @@ window.addEventListener("pywebviewready", () => {
       if (S && S.quota) renderQuota(S.quota);
       setTimeout(() => rows.classList.remove("slide-r", "slide-l"), 300);
     };
+  setSaveFolded(saveFolded);
+  $("saveHead").onclick = () => setSaveFolded(!saveFolded);
+  $("saveHead").onkeydown = e => {
+    if (e.key === " " || e.key === "Enter") { e.preventDefault(); setSaveFolded(!saveFolded); }
+  };
   $("quotaHead").onclick = () => setQuotaFolded(!quotaFolded, true);
   $("quotaHead").onkeydown = e => {
     if (e.key === " " || e.key === "Enter") { e.preventDefault(); setQuotaFolded(!quotaFolded, true); }

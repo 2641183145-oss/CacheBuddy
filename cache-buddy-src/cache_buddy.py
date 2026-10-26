@@ -581,8 +581,12 @@ def session_state(sid):
 # same wherever it runs. Longest matching prefix wins, so -fast/-flex tiers
 # fall back to their base model's price.
 # source: docs.devinenterprise.com/desktop/models (swe, claude, kimi);
-# openai.com/api/pricing, Standard, short context, 2026-10-15 (gpt)
+# openai.com/api/pricing, Standard, short context, 2026-10-15 (gpt);
+# fable / gemini-4-argon: the docs page's self-serve cost table, 2026-10-26
 _PRICES = {
+    'claude-fable-5-1':  (10.0, 50.0, 0.25, 12.5),
+    'claude-5-fable':    (10.0, 50.0, 1.0, 12.5),
+    'gemini-4-argon':    (2.0, 10.0, 0.1, 2.0),
     'swe-2':      (0.75, 3.75, 0.075, 0.0),
     'swe-1-7-lightning': (2.5, 12.5, 1.0, 0.0),
     'swe-1-7':    (0.5, 2.5, 0.2, 0.0),

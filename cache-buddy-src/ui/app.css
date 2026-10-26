@@ -530,6 +530,48 @@ button:disabled {
   margin-bottom: 7px;
 }
 
+/* folded by default: the title line and its total; a click opens the
+   month of squares */
+#saveHead {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  outline: none;
+}
+
+.schev {
+  display: inline-block;
+  width: 9px;
+  margin-right: 3px;
+  font-style: normal;
+  color: #9CA3AF;
+  transform: rotate(90deg);
+  transition: transform .2s ease;
+}
+
+#saveCard.folded .schev {
+  transform: none;
+}
+
+#saveHead:hover .schev,
+#saveHead:focus-visible .schev {
+  color: #6B7280;
+}
+
+#saveCard.folded .shead {
+  margin-bottom: 0;
+}
+
+#saveCard.folded .mnav,
+#saveCard.folded .heat,
+#saveCard.folded .htip {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .schev { transition: none; }
+}
+
 .stotal {
   margin-left: 6px;
   font-weight: 600;
