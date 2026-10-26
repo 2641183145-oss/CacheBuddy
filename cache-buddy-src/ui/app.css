@@ -541,8 +541,14 @@ button:disabled {
 
 /* a stack of coins: the top one green while the total is a saving,
    lifts on hover and flips once on each fold/unfold */
+/* lined up with the Sessions folder above: its 18px box starts 2px
+   further in (the drum's padding), then the same 5px gap to the title */
+#saveHead {
+  color: #374151;
+}
+
 .sico {
-  margin-right: 5px;
+  margin: 0 7px 0 4px;
   overflow: visible;
 }
 
