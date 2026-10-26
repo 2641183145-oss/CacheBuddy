@@ -1542,16 +1542,7 @@ function quotaWindows(windows) {
   for (const b of seg.querySelectorAll("button"))
     b.classList.toggle("on", b.dataset.pool === quotaPool);
   movePoolThumb();
-  // the thumb's hairline: the shown pool's busiest window, in its ring
-  // colour (refresh keeps the transition; a switch restarts from 0 in
-  // the click handler before this runs)
   const pools = { s, c };
-  const shown = pools[quotaPool] || [];
-  const hot = shown.reduce((m, w) => Math.max(m, w.used || 0), 0);
-  const i = shown.findIndex(w => (w.used || 0) === hot);
-  const meter = $("poolThumb").querySelector(".pmeter");
-  meter.style.setProperty("--w", Math.round(hot) + "%");
-  meter.style.setProperty("--c", ringColor(RING_BASE[i < 0 ? 2 : i] || RING_BASE[2], hot));
   // the hidden pool at >=90% warns on its letter — Core can fill up
   // while the card shows S
   const other = quotaPool === "c" ? "s" : "c";
@@ -3532,9 +3523,6 @@ window.addEventListener("pywebviewready", () => {
       th.classList.remove("squash");
       void th.offsetWidth;
       th.classList.add("squash");
-      // the meter restarts its fill from 0 on a switch (not on refresh)
-      const meter = th.querySelector(".pmeter");
-      meter.style.setProperty("--w", "0%");
       for (const x of $("segPool").querySelectorAll("button"))
         x.classList.toggle("on", x === b);
       movePoolThumb();

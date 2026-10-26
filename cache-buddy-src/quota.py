@@ -160,17 +160,14 @@ def devin_quota(ps):
 
 def factory_quota(lim):
     """/api/billing/limits -> {plan, until, windows, extra}. Standard's
-    5-hour/weekly/monthly windows; Droid Core's (open models Factory hosts)
-    only once it has been used — idle, they're three 0% rows of noise."""
+    5-hour/weekly/monthly windows and Droid Core's (open models Factory
+    hosts), even idle — the panel's S/C switch shows one pool at a time."""
     out = {"plan": "", "until": None, "windows": [], "extra": None}
     pools = lim.get("limits") or {}
     for pool, core in (("standard", False), ("core", True)):
         p = pools.get(pool) or {}
         ws = [(k, p.get(n)) for k, n in (("5h", "fiveHour"), ("week", "weekly"),
                                          ("month", "monthly")) if p.get(n)]
-        if core and not any((w.get("usedPercent") or 0) > 0 or w.get("windowEnd")
-                            for _, w in ws):
-            continue
         for k, w in ws:
             end = w.get("windowEnd")
             at = (_iso(end) if isinstance(end, str)

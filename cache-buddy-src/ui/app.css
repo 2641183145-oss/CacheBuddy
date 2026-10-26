@@ -2240,28 +2240,6 @@ button:disabled {
   box-shadow: none;
 }
 
-/* hairline meter inside the thumb: the shown pool's busiest window */
-.qseg .pmeter {
-  position: absolute;
-  left: 3px;
-  right: 3px;
-  bottom: .5px;
-  height: 1.5px;
-  border-radius: 1px;
-  overflow: hidden;
-}
-
-.qseg .pmeter::before {
-  content: "";
-  display: block;
-  height: 100%;
-  width: var(--w, 0%);
-  background: var(--c, #3FA46A);
-  opacity: .85;
-  border-radius: 1px;
-  transition: width .45s ease-out, background .3s;
-}
-
 /* the other pool at >=90%: a slow-breathing dot on its letter */
 .qseg .pdot {
   position: absolute;
