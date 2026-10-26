@@ -2147,7 +2147,13 @@ function tokColTip(e) {
 
 // the savings card starts folded; a click on its title opens the squares
 let saveFolded = localStorage.getItem("cb.saveFolded") !== "0";
-function setSaveFolded(on) {
+function setSaveFolded(on, flip) {
+  if (flip) {
+    const c = $("saveHead").querySelector(".scoin");
+    c.classList.remove("flip");
+    void c.getBoundingClientRect();
+    c.classList.add("flip");
+  }
   saveFolded = on;
   localStorage.setItem("cb.saveFolded", on ? "1" : "0");
   $("saveCard").classList.toggle("folded", on);
@@ -2168,6 +2174,7 @@ function renderHeat(led) {
   const total = days.reduce((a, d) => a + (d.net || 0), 0);
   $("saveTotal").textContent = total > 0 ? money(total)
     : total < 0 ? "−" + money(-total) : "";
+  card.classList.toggle("up", total > 0);
   $("saveTotal").title = T(total < 0 ? "Spent more on heartbeats than rescued"
     : "Saved by keeping the cache alive");
   $("mLabel").textContent = monthLabel(heatMonth);
@@ -3545,9 +3552,9 @@ window.addEventListener("pywebviewready", () => {
       setTimeout(() => rows.classList.remove("slide-r", "slide-l"), 300);
     };
   setSaveFolded(saveFolded);
-  $("saveHead").onclick = () => setSaveFolded(!saveFolded);
+  $("saveHead").onclick = () => setSaveFolded(!saveFolded, true);
   $("saveHead").onkeydown = e => {
-    if (e.key === " " || e.key === "Enter") { e.preventDefault(); setSaveFolded(!saveFolded); }
+    if (e.key === " " || e.key === "Enter") { e.preventDefault(); setSaveFolded(!saveFolded, true); }
   };
   $("quotaHead").onclick = () => setQuotaFolded(!quotaFolded, true);
   $("quotaHead").onkeydown = e => {

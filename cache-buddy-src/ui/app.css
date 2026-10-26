@@ -539,23 +539,41 @@ button:disabled {
   outline: none;
 }
 
-.schev {
-  display: inline-block;
-  width: 9px;
-  margin-right: 3px;
-  font-style: normal;
-  color: #9CA3AF;
-  transform: rotate(90deg);
-  transition: transform .2s ease;
+/* a stack of coins: the top one green while the total is a saving,
+   lifts on hover and flips once on each fold/unfold */
+.sico {
+  margin-right: 5px;
+  overflow: visible;
 }
 
-#saveCard.folded .schev {
-  transform: none;
+.sico .scoin {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform .2s ease, fill .3s;
 }
 
-#saveHead:hover .schev,
-#saveHead:focus-visible .schev {
-  color: #6B7280;
+#saveCard.up .sico .scoin {
+  fill: #3FA46A;
+  stroke: #3FA46A;
+}
+
+#saveHead:hover .sico .scoin,
+#saveHead:focus-visible .sico .scoin {
+  transform: translateY(-1px);
+}
+
+#saveCard:not(.up) .stotal {
+  color: rgba(209, 67, 67, .8);
+}
+
+.sico .scoin.flip {
+  animation: scoin-flip .36s ease-out;
+}
+
+@keyframes scoin-flip {
+  0% { transform: translateY(-1px) scaleX(1); }
+  50% { transform: translateY(-2.5px) scaleX(.1); }
+  100% { transform: translateY(-1px) scaleX(1); }
 }
 
 #saveCard.folded .shead {
@@ -569,7 +587,8 @@ button:disabled {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .schev { transition: none; }
+  .sico .scoin { transition: none; }
+  .sico .scoin.flip { animation: none; }
 }
 
 .stotal {
