@@ -597,6 +597,8 @@ _PRICES = {
     'kimi-k3':    (3.0, 15.0, 0.3, 0.0),
     'gpt-6-astra':  (10.0, 50.0, 1.0, 12.5),
     'gpt-6.1-sol':  (2.0, 10.0, 0.1, 2.5),
+    # openai pricing page, Standard, short context, 2026-11-01
+    'gpt-6.1-terra': (1.0, 5.0, 0.05, 1.25),
     'gpt-6-luna':   (0.1, 0.5, 0.01, 0.125),
     'gpt-6-sol':    (2.0, 10.0, 0.2, 2.5),
     'gpt-5.6-sol':  (4.0, 20.0, 0.4, 5.0),
@@ -609,9 +611,10 @@ _PRICES = {
 def _price_for(model):
     if not model:
         return None
-    model = model.lower()
+    # Devin spells versions with dashes (gpt-6-1-sol), OpenAI with dots
+    model = model.lower().replace(".", "-")
     for k in sorted(_PRICES, key=len, reverse=True):   # longest prefix wins
-        if model.startswith(k):
+        if model.startswith(k.replace(".", "-")):
             return _PRICES[k]
     return None
 
